@@ -1,3 +1,6 @@
+########################################
+# Ignore everything that isn't BP or C++
+########################################
 /Saved
 /Intermediate
 /Content/__ExternalObjects__/ThirdPerson/Maps

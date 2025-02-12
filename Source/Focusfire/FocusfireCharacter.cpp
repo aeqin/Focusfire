@@ -4,6 +4,7 @@
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
@@ -44,13 +45,30 @@ AFocusfireCharacter::AFocusfireCharacter()
 	c_CameraBoom->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
 	c_CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 
-	// Create a follow camera
-	c_FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	c_FollowCamera->SetupAttachment(c_CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
-	c_FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	// Create a follow (third person) camera
+	c_ThirdPOVCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ThirdPersonCamera"));
+	c_ThirdPOVCamera->SetupAttachment(c_CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	c_ThirdPOVCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	c_ThirdPOVCamera->bAutoActivate = true; // Default camera
+	// Create arrow component to "save the place" of the third person camera
+	c_ThirdPOVArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("ThirdPersonCameraArrow"));
+	c_ThirdPOVArrow->SetupAttachment(c_CameraBoom, USpringArmComponent::SocketName);
+	c_ThirdPOVArrow->SetRelativeTransform(c_ThirdPOVCamera->GetRelativeTransform());
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	// Create a first person camera
+	c_FirstPOVCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FirstPersonCamera"));
+	c_FirstPOVCamera->SetupAttachment(GetMesh(), "head");
+	c_FirstPOVCamera->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));
+	c_FirstPOVCamera->SetRelativeLocation(FVector(0.0f, 10.0f, 0.0f));
+	c_FirstPOVCamera->bUsePawnControlRotation = true; // Rotate camera with look
+	c_FirstPOVCamera->bAutoActivate = false;
+	// Create arrow component to "save the place" of the first person camera
+	c_FirstPOVArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("FirstPersonCameraArrow"));
+	c_FirstPOVArrow->SetupAttachment(GetMesh(), "head");
+	c_FirstPOVArrow->SetRelativeTransform(c_FirstPOVCamera->GetRelativeTransform());
+
+	// Set the "current camera", as only the third person camera is auto-activated
+	CurrentCamera = c_ThirdPOVCamera;
 
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -148,6 +166,49 @@ void AFocusfireCharacter::Look(const FInputActionValue& Value)
 }
 // END Input
 //////////////////////////////////////////////////////////////////////////
+
+
+FVector AFocusfireCharacter::LerpCurrentCameraLocation(const float Alpha)
+{
+	FVector _a_location = (CurrentCamera == c_FirstPOVCamera) ? c_FirstPOVArrow->GetComponentLocation() : c_ThirdPOVArrow->GetComponentLocation();
+	FVector _b_location = (CurrentCamera == c_FirstPOVCamera) ? c_ThirdPOVArrow->GetComponentLocation() : c_FirstPOVArrow->GetComponentLocation();
+	return FMath::Lerp(_a_location, _b_location, Alpha);
+}
+
+void AFocusfireCharacter::SwitchCameraBegin()
+{
+	if (CurrentCamera == c_FirstPOVCamera)
+	{
+		bUseControllerRotationYaw = false; // Do NOT turn Player with camera in third person view
+	}
+	else if (CurrentCamera == c_ThirdPOVCamera)
+	{
+		// Set bUseControllerRotationYaw = true on SwitchCameraEnd(), so that DURING transition, blueprint can lerp Player yaw rotation towards camera dir
+	}
+	flag_isCurrentlySwitchingCamera = true;
+}
+
+void AFocusfireCharacter::SwitchCameraEnd()
+{
+	if (CurrentCamera == c_FirstPOVCamera)
+	{
+		CurrentCamera->SetWorldLocation(c_FirstPOVArrow->GetComponentLocation()); // Reset moved first person camera back to default arrow pos
+		CurrentCamera->SetActive(false);
+		CurrentCamera = c_ThirdPOVCamera;
+		CurrentCamera->SetActive(true);
+		bUseControllerRotationYaw = false; // Do NOT turn Player with camera
+	}
+	else if (CurrentCamera == c_ThirdPOVCamera)
+	{
+		CurrentCamera->SetWorldLocation(c_ThirdPOVArrow->GetComponentLocation()); // Reset moved third person camera back to default arrow pos
+		CurrentCamera->SetActive(false);
+		CurrentCamera = c_FirstPOVCamera;
+		CurrentCamera->SetActive(true);
+		bUseControllerRotationYaw = true; // Turn Player with camera
+	}
+	CurrentCamera->SetActive(true);
+	flag_isCurrentlySwitchingCamera = false;
+}
 
 void AFocusfireCharacter::HandleHealthChanged(float Magnitude, float NewHealth)
 {

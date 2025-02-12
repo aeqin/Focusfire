@@ -11,6 +11,7 @@
 /** Forward Declarations */
 class USpringArmComponent;
 class UCameraComponent;
+class UTimelineComponent;
 class UInputMappingContext;
 class UInputAction;
 class UAbilitySystemComponent;
@@ -28,9 +29,22 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	USpringArmComponent* c_CameraBoom;
 
-	/** Follow camera */
+	/** Third Person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* c_FollowCamera;
+	UCameraComponent* c_ThirdPOVCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UArrowComponent* c_ThirdPOVArrow;
+
+	/** First Person camera */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UCameraComponent* c_FirstPOVCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UArrowComponent* c_FirstPOVArrow;
+
+	UPROPERTY(BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+	UCameraComponent* CurrentCamera;
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -53,23 +67,46 @@ public:
 	virtual void BeginPlay() override;
 
 protected:
+	virtual void NotifyControllerChanged() override;
+
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-protected:
+	/** 
+	* Based on the POV of the CurrentCamera, lerp the in-between position
+	* @param float Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
+	* @return FVector -- The in-progress lerped position of the CurrentCamera each frame
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	FVector LerpCurrentCameraLocation(const float Alpha);
 
-	virtual void NotifyControllerChanged() override;
-
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	bool flag_isCurrentlySwitchingCamera = false;
+	
+	/** 
+	* Called before timeline transition, toggle bUseControllerRotationYaw depending on POV of CurrentCamera
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	void SwitchCameraBegin();
+	
+	/** 
+	* Called after timeline transition, switch and set the Player's CurrentCamera between the first and third person view
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	void SwitchCameraEnd();
+	
 public:
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return c_CameraBoom; }
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return c_FollowCamera; }
+	/** Cameras **/
+	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return c_CameraBoom; } /** Returns CameraBoom subobject **/
+	FORCEINLINE UCameraComponent* GetThirdPOVCamera() const { return c_ThirdPOVCamera; } /** Returns Third Person Camera **/
+	FORCEINLINE UCameraComponent* GetFirstPOVCamera() const { return c_FirstPOVCamera; } /** Returns First Person Camera **/
+	FORCEINLINE UCameraComponent* GetCurrentCamera() const { return CurrentCamera; }
+	
 
 	/** GameplayAbilitySystem **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
@@ -77,7 +114,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
 
-public: /* GameplayAbilitySystem Attributes*/
+	/* GameplayAbilitySystem Attributes*/
 	UPROPERTY()
 	TObjectPtr<UAttributeSetHealth> as_HealthAttributeSet;
 
