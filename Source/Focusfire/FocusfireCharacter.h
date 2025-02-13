@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayTagContainer.h"
 #include "FocusfireCharacter.generated.h"
 
 /** Forward Declarations */
@@ -107,14 +108,17 @@ public:
 	FORCEINLINE UCameraComponent* GetFirstPOVCamera() const { return c_FirstPOVCamera; } /** Returns First Person Camera **/
 	FORCEINLINE UCameraComponent* GetCurrentCamera() const { return CurrentCamera; }
 	
-
+	/** GameplayTags for FocusfireCharacter **/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GAS", meta = (AllowPrivateAccess = "true"))
+	FGameplayTagContainer GameplayTags;
+	
 	/** GameplayAbilitySystem **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
 
-	/* GameplayAbilitySystem Attributes*/
+	/* GameplayAbilitySystem Attributes */
 	UPROPERTY()
 	TObjectPtr<UAttributeSetHealth> as_HealthAttributeSet;
 
