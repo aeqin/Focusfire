@@ -26,6 +26,10 @@ protected:
 
 	FTimerHandle PeriodTimerHandle;
 
+	// How slow should the time be during "focus" state
+	UPROPERTY(EditAnywhere)
+	float SlowTimeDilation = 0.2f;
+
 	/** 
 	* Every second, decrement a timer. Once the timer has ended, end the "focus period" ability
 	*/

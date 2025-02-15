@@ -29,7 +29,7 @@ protected:
 	TObjectPtr<USphereComponent> c_SphereComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess="true"))
-	FCollisionProfileName CollisionProfile = FName("OverlapAll");
+	FCollisionProfileName CollisionProfile = FName("Focus");
 
 public:	
 	// Called every frame
@@ -40,8 +40,4 @@ public:
 	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
-
-	// Gameplay-related tags associated with this actor
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GAS", meta = (AllowPrivateAccess = "true"))
-	FGameplayTagContainer GameplayTags;
 };

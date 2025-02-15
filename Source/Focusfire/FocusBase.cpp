@@ -15,6 +15,7 @@ AFocusBase::AFocusBase()
 	c_SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 	SetRootComponent(c_SphereComponent);
 	c_SphereComponent->SetCollisionProfileName(CollisionProfile.Name, true);
+	c_SphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // Raycast-able, but won't physically block player
 	
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));

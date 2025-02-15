@@ -9,7 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "FocusfireCharacter.generated.h"
 
-/** Forward Declarations */
+class AFocusBase;
 class USpringArmComponent;
 class UCameraComponent;
 class UTimelineComponent;
@@ -20,6 +20,7 @@ class UAttributeSetHealth;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFocusInRangeChanged, AFocusBase*, FocusInRange);
 
 UCLASS(config=Game)
 class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
@@ -66,6 +67,7 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 public:
 	AFocusfireCharacter();
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 
 protected:
 	virtual void NotifyControllerChanged() override;
@@ -86,6 +88,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	FVector LerpCurrentCameraLocation(const float Alpha);
 
+	/** Whether Player is currently switching between POV cameras */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	bool flag_isCurrentlySwitchingCamera = false;
 	
@@ -100,17 +103,41 @@ protected:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void SwitchCameraEnd();
+
+	/** Length of distance where raycast to check for "focus" extends */
+	UPROPERTY(BlueprintReadWrite, Category = "FocusfireCharacter")
+	float RangeOfFocusRaycast = 1000.0f;
+	
+	/** The current "focus" in range, under crosshair */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	AFocusBase* CurrentFocusInRange;
+	
+	/** 
+	* Called every Tick(), during the gameplay ability "focus period". Sets CurrentFocusInRange, if there is any focus
+	* in range
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	void OnTickRaycastForFocus();
+
+	/** 
+	* Event that fires if CurrentFocusInRange changes
+	*/
+	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
+	FOnFocusInRangeChanged OnFocusInRangeChanged;
 	
 public:
 	/** Cameras **/
-	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return c_CameraBoom; } /** Returns CameraBoom subobject **/
-	FORCEINLINE UCameraComponent* GetThirdPOVCamera() const { return c_ThirdPOVCamera; } /** Returns Third Person Camera **/
-	FORCEINLINE UCameraComponent* GetFirstPOVCamera() const { return c_FirstPOVCamera; } /** Returns First Person Camera **/
+	/** Returns CameraBoom subobject **/
+	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return c_CameraBoom; }
+	/** Returns Third Person Camera **/
+	FORCEINLINE UCameraComponent* GetThirdPOVCamera() const { return c_ThirdPOVCamera; }
+	/** Returns First Person Camera **/
+	FORCEINLINE UCameraComponent* GetFirstPOVCamera() const { return c_FirstPOVCamera; }
+	/** Returns The current POV Camera **/
 	FORCEINLINE UCameraComponent* GetCurrentCamera() const { return CurrentCamera; }
 	
-	/** GameplayTags for FocusfireCharacter **/
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="GAS", meta = (AllowPrivateAccess = "true"))
-	FGameplayTagContainer GameplayTags;
+	UFUNCTION(BlueprintPure, Category = "FocusfireCharacter")
+	FORCEINLINE bool GetCameraIsCurrentlyFirstPersonPOV() const { return CurrentCamera == c_FirstPOVCamera; }
 	
 	/** GameplayAbilitySystem **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))

@@ -13,6 +13,9 @@
 #include "InputActionValue.h"
 #include "AbilitySystemComponent.h"
 #include "AttributeSetHealth.h"
+#include "FocusBase.h"
+#include "GameplayTagsManager.h"
+#include "KismetTraceUtils.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -90,6 +93,13 @@ void AFocusfireCharacter::BeginPlay()
 	{
 		as_HealthAttributeSet->OnHealthChanged.AddDynamic(this, &AFocusfireCharacter::HandleHealthChanged);
 	}
+}
+
+void AFocusfireCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	AFocusfireCharacter::OnTickRaycastForFocus();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -208,6 +218,53 @@ void AFocusfireCharacter::SwitchCameraEnd()
 	}
 	CurrentCamera->SetActive(true);
 	flag_isCurrentlySwitchingCamera = false;
+}
+
+void AFocusfireCharacter::OnTickRaycastForFocus()
+{
+	// If Player is not currently have "GameplayAbility.Focus.Period" active, then return
+	if (not (c_AbilitySystemComponent and c_AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsManager::Get().RequestGameplayTag("GameplayAbility.Focus.Period"))))
+	{
+		return;
+	}
+	
+	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
+	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfFocusRaycast;
+	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
+	const FColor _ColorBeforeHit = FColor::Green;
+	const FColor _ColorAfterHit = FColor::Red;
+
+	FHitResult _HitResult;
+	if (UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		_TraceStart,
+		_TraceEnd,
+		UEngineTypes::ConvertToTraceType(ECC_Visibility),
+		false,
+		_ActorsToIgnore,
+		EDrawDebugTrace::ForDuration, // Set to EDrawDebugTrace::None if not debugging
+		_HitResult,
+		true,
+		_ColorBeforeHit,
+		_ColorAfterHit
+	))
+	{
+		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Line trace has hit: %s"), *(_FocusBase->GetName()));
+			CurrentFocusInRange = _FocusBase;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Line trace has hit: %s"), *(_HitResult.GetActor()->GetName()));
+			CurrentFocusInRange = nullptr;
+		}
+	}
+	else
+	{
+		CurrentFocusInRange = nullptr;
+	}
+	OnFocusInRangeChanged.Broadcast(CurrentFocusInRange);
 }
 
 void AFocusfireCharacter::HandleHealthChanged(float Magnitude, float NewHealth)

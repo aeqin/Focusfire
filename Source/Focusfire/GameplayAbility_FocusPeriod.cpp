@@ -22,7 +22,7 @@ void UGameplayAbility_FocusPeriod::TickPeriodTimer()
 void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 {
 	// Slow down Player while in focus period ability
-	CurrentActorInfo->AvatarActor->CustomTimeDilation = 0.2;
+	CurrentActorInfo->AvatarActor->CustomTimeDilation = SlowTimeDilation;
 
 	// TODO: Also slow down other FocusBase/Player's in radius?
 }
