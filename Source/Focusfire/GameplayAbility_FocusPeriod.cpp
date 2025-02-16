@@ -35,7 +35,7 @@ void UGameplayAbility_FocusPeriod::FocusPeriodEnd()
 	// Clear running timer
 	GetWorld()->GetTimerManager().ClearTimer(PeriodTimerHandle);
 
-	UE_LOG(LogTemp, Warning, TEXT("UGameplayAbility_FocusPeriod::FocusPeriodEnd"));
+	UE_LOG(LogTemp, Warning, TEXT("ccc UGameplayAbility_FocusPeriod::FocusPeriodEnd"));
 }
 
 bool UGameplayAbility_FocusPeriod::CommitAbility(const FGameplayAbilitySpecHandle Handle,

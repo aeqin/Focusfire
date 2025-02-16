@@ -80,6 +80,10 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	/** AbilitySystemComponent **/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
+	
 	/** 
 	* Based on the POV of the CurrentCamera, lerp the in-between position
 	* @param float Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
@@ -106,7 +110,7 @@ protected:
 
 	/** Length of distance where raycast to check for "focus" extends */
 	UPROPERTY(BlueprintReadWrite, Category = "FocusfireCharacter")
-	float RangeOfFocusRaycast = 1000.0f;
+	float RangeOfFocusRaycast = 2000.0f;
 	
 	/** The current "focus" in range, under crosshair */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -138,12 +142,12 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "FocusfireCharacter")
 	FORCEINLINE bool GetCameraIsCurrentlyFirstPersonPOV() const { return CurrentCamera == c_FirstPOVCamera; }
-	
-	/** GameplayAbilitySystem **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
 
+	/** Returns The Ability System Component **/
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
+
+	/** Returns The current focus in range **/
+	FORCEINLINE AFocusBase* GetCurrentFocusInRange() const { return CurrentFocusInRange; }
 
 	/* GameplayAbilitySystem Attributes */
 	UPROPERTY()

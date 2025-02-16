@@ -251,12 +251,12 @@ void AFocusfireCharacter::OnTickRaycastForFocus()
 	{
 		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Line trace has hit: %s"), *(_FocusBase->GetName()));
+			UE_LOG(LogTemp, Warning, TEXT("ccc Line trace has hit: %s"), *(_FocusBase->GetName()));
 			CurrentFocusInRange = _FocusBase;
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Line trace has hit: %s"), *(_HitResult.GetActor()->GetName()));
+			UE_LOG(LogTemp, Warning, TEXT("ccc Line trace has hit: %s"), *(_HitResult.GetActor()->GetName()));
 			CurrentFocusInRange = nullptr;
 		}
 	}
