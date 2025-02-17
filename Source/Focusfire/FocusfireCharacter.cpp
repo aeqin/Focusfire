@@ -14,6 +14,8 @@
 #include "AbilitySystemComponent.h"
 #include "AttributeSetHealth.h"
 #include "FocusBase.h"
+#include "GameplayAbility_FocusDash.h"
+#include "GameplayAbility_FocusPeriod.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
 
@@ -88,6 +90,7 @@ void AFocusfireCharacter::BeginPlay()
 	{
 		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		c_AbilitySystemComponent->SetNumericAttributeBase(UAttributeSetHealth::GetHealthAttribute(), 100);
+		c_AbilitySystemComponent->OnAbilityEnded.AddUObject(this, &AFocusfireCharacter::OnGameplayAbilityEnded);
 	}
 	if (as_HealthAttributeSet)
 	{
@@ -265,6 +268,18 @@ void AFocusfireCharacter::OnTickRaycastForFocus()
 		CurrentFocusInRange = nullptr;
 	}
 	OnFocusInRangeChanged.Broadcast(CurrentFocusInRange);
+}
+
+void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& AbilityEndedData)
+{
+	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
+	{
+		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
+	}
+	else if (UGameplayAbility_FocusPeriod* _endedPeriod = Cast<UGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))
+	{
+		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
+	}
 }
 
 void AFocusfireCharacter::HandleHealthChanged(float Magnitude, float NewHealth)

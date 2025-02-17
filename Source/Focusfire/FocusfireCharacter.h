@@ -9,6 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "FocusfireCharacter.generated.h"
 
+struct FAbilityEndedData;
 class AFocusBase;
 class USpringArmComponent;
 class UCameraComponent;
@@ -86,7 +87,7 @@ protected:
 	
 	/** 
 	* Based on the POV of the CurrentCamera, lerp the in-between position
-	* @param float Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
+	* @param Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
 	* @return FVector -- The in-progress lerped position of the CurrentCamera each frame
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
@@ -128,6 +129,24 @@ protected:
 	*/
 	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
 	FOnFocusInRangeChanged OnFocusInRangeChanged;
+
+	/** 
+	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
+	* @param AbilityEndedData Contains info about the GameplayAbility that just ended
+	*/
+	void OnGameplayAbilityEnded(const FAbilityEndedData& AbilityEndedData);
+
+	/** 
+	* Event that is fired when the FocusDash GameplayAbility has just ended
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnFocusDashEnded(const bool bWasCancelled);
+
+	/** 
+	* Event that is fired when the FocusPeriod GameplayAbility has just ended
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnFocusPeriodEnded(const bool bWasCancelled);
 	
 public:
 	/** Cameras **/
@@ -155,8 +174,8 @@ public:
 
 	/** 
 	* When Player's Health is changed, handle it
-	* @param float Magnitude: How much is the Health changed by
-	* @param float NewHealth: The new Health
+	* @param Magnitude: How much is the Health changed by
+	* @param NewHealth: The new Health
 	* @return
 	*/
 	UFUNCTION()
