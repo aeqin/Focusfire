@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "AbilitySystemInterface.h"
+#include "FocusBase.h"
 #include "GameplayTagContainer.h"
 #include "FocusfireCharacter.generated.h"
 
@@ -48,6 +49,9 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 
 	UPROPERTY(BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* CurrentCamera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UArrowComponent* c_FocusShootArrow;
 	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -81,14 +85,11 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
-	/** AbilitySystemComponent **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
-	
+protected: /* Switching camera POV */
 	/** 
 	* Based on the POV of the CurrentCamera, lerp the in-between position
 	* @param Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
-	* @return FVector -- The in-progress lerped position of the CurrentCamera each frame
+	* @return The in-progress lerped position of the CurrentCamera each frame
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	FVector LerpCurrentCameraLocation(const float Alpha);
@@ -109,6 +110,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void SwitchCameraEnd();
 
+protected: /* FocusBase under crosshair */
 	/** Length of distance where raycast to check for "focus" extends */
 	UPROPERTY(BlueprintReadWrite, Category = "FocusfireCharacter")
 	float RangeOfFocusRaycast = 2000.0f;
@@ -130,6 +132,15 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
 	FOnFocusInRangeChanged OnFocusInRangeChanged;
 
+protected: /* Shooting FocusBase */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
+	
+protected: /* GameplayAbilitySystem */
+	/** AbilitySystemComponent **/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
+	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
 	* @param AbilityEndedData Contains info about the GameplayAbility that just ended
@@ -168,6 +179,12 @@ public:
 	/** Returns The current focus in range **/
 	FORCEINLINE AFocusBase* GetCurrentFocusInRange() const { return CurrentFocusInRange; }
 
+	/** Returns The arrow component of where to spawn FocusBase **/
+	FORCEINLINE UArrowComponent* GetFocusSpawnArrow() const { return c_FocusShootArrow; }
+	
+	/** Returns The current focus to spawn (to shoot) **/
+	FORCEINLINE TSubclassOf<AFocusBase> GetCurrentFocusToShoot() const { return TypeOfFocusToShoot; }
+	
 	/* GameplayAbilitySystem Attributes */
 	UPROPERTY()
 	TObjectPtr<UAttributeSetHealth> as_HealthAttributeSet;

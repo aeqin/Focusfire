@@ -4,6 +4,7 @@
 #include "FocusBase.h"
 #include "AbilitySystemComponent.h"
 #include "Components/SphereComponent.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 // Sets default values
 AFocusBase::AFocusBase()
@@ -16,6 +17,11 @@ AFocusBase::AFocusBase()
 	SetRootComponent(c_SphereComponent);
 	c_SphereComponent->SetCollisionProfileName(CollisionProfile.Name, true);
 	c_SphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // Raycast-able, but won't physically block player
+	c_SphereComponent->SetHiddenInGame(false); // See (in-game) debug collision sphere
+
+	// Create projectile motion component
+	c_ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
+	c_ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
 	
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -35,3 +41,7 @@ void AFocusBase::Tick(float DeltaTime)
 
 }
 
+void AFocusBase::ShootInDirection(const FVector Direction)
+{
+	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
+}

@@ -75,6 +75,11 @@ AFocusfireCharacter::AFocusfireCharacter()
 	// Set the "current camera", as only the third person camera is auto-activated
 	CurrentCamera = c_ThirdPOVCamera;
 
+	// Create arrow component to act as the spawn point for where FocusBase are shot out from
+	c_FocusShootArrow = CreateDefaultSubobject<UArrowComponent>(TEXT("FocusBaseSpawnArrow"));
+	c_FocusShootArrow->SetupAttachment(GetMesh(), "head");
+	c_FocusShootArrow->SetRelativeTransform(c_FirstPOVCamera->GetRelativeTransform());
+	
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 

@@ -8,7 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "FocusBase.generated.h"
 
-// Forward Declarations
+class UProjectileMovementComponent;
 class USphereComponent;
 
 UCLASS()
@@ -31,6 +31,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess="true"))
 	FCollisionProfileName CollisionProfile = FName("Focus");
 
+	/** Projectile Motion */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UProjectileMovementComponent* c_ProjectileMovementComponent;
+	
+	/** Shoot speed, the speed at which the FocusBase is shot out at */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float ShootSpeed = 100.0f;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -40,4 +48,11 @@ public:
 	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
+
+	/** 
+	* Shoot the FocusBase forward at speed
+	* @param Direction: The direction at which to shoot the FocusBase
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	void ShootInDirection(const FVector Direction);
 };
