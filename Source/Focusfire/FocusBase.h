@@ -55,4 +55,10 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
 	void ShootInDirection(const FVector Direction);
+
+	/** 
+	* Lock the FocusBase in place (cancel velocity)
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	void LockInPlace();
 };

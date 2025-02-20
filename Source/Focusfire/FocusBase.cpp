@@ -45,3 +45,8 @@ void AFocusBase::ShootInDirection(const FVector Direction)
 {
 	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
 }
+
+void AFocusBase::LockInPlace()
+{
+	c_ProjectileMovementComponent->Velocity = FVector(0, 0, 0);
+}

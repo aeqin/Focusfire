@@ -16,6 +16,7 @@
 #include "FocusBase.h"
 #include "GameplayAbility_FocusDash.h"
 #include "GameplayAbility_FocusPeriod.h"
+#include "GameplayAbility_FocusShoot.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
 
@@ -140,6 +141,9 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::Look);
+
+		// Using focus ability
+		EnhancedInputComponent->BindAction(UseFocusAbilityAction, ETriggerEvent::Started, this, &AFocusfireCharacter::UseFocusAbility);
 	}
 	else
 	{
@@ -182,6 +186,13 @@ void AFocusfireCharacter::Look(const FInputActionValue& Value)
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
 }
+
+void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ccc Using Focusfire Ability"));
+	//c_AbilitySystemComponent->TryActivateAbilityByClass(UGameplayAbility_FocusShoot::StaticClass());
+}
+
 // END Input
 //////////////////////////////////////////////////////////////////////////
 

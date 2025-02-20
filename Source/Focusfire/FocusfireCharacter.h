@@ -69,6 +69,10 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
 
+	/** UseFocusAbility Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* UseFocusAbilityAction;
+
 public:
 	AFocusfireCharacter();
 	virtual void BeginPlay() override;
@@ -84,6 +88,9 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+
+	/** Called for using focus abilities input */
+	void UseFocusAbility(const FInputActionValue& Value);
 
 protected: /* Switching camera POV */
 	/** 

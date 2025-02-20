@@ -25,7 +25,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusDash")
 	float DashToDuration = 0.2f;
 	
-	/** Get a FocusBase to dash to */
+	/** Gets a FocusBase to dash to, called just before dashing to it in BP using ApplyRootMotionMoveToActorForce task */
 	UFUNCTION(BlueprintCallable, Category = "FocusDash")
 	AFocusBase* DashToFocusInRange();
 

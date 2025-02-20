@@ -11,6 +11,9 @@ AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
 	{
 		// Get the current "focus" under the crosshair
+		AFocusBase* _dashToFocus = _player->GetCurrentFocusInRange();
+		_dashToFocus->LockInPlace(); // Lock it in place (cancel its velocity)
+
 		UE_LOG(LogTemp, Display, TEXT("ccc DashToFocusInRange"));
 		return _player->GetCurrentFocusInRange();
 	}
