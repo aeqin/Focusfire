@@ -3,6 +3,10 @@
 
 #include "GameplayAbility_FocusPeriod.h"
 
+#include "FocusfireCharacter.h"
+#include "Chaos/SoftsExternalForces.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 UGameplayAbility_FocusPeriod::UGameplayAbility_FocusPeriod()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
@@ -24,6 +28,17 @@ void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 	// Slow down Player while in focus period ability
 	CurrentActorInfo->AvatarActor->CustomTimeDilation = SlowTimeDilation;
 
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
+	{
+		if (_player->GetFocusSpawnArrow())
+		{
+			// Disable Player gravity & set velocity to zero
+			_player->SetGravityByMultiplier(0.0);
+			_player->GetCharacterMovement()->Velocity = FVector(0, 0, 0);
+			UE_LOG(LogTemp, Warning, TEXT("ccc FREEZE PLAYER DURING LOCKED FOCUS"));
+		}
+	}
+	
 	// TODO: Also slow down other FocusBase/Player's in radius?
 }
 
@@ -31,6 +46,12 @@ void UGameplayAbility_FocusPeriod::FocusPeriodEnd()
 {
 	// Return Player back to normal time
 	CurrentActorInfo->AvatarActor->CustomTimeDilation = 1;
+
+	// Set Player gravity back to default
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
+	{
+		_player->SetGravityByMultiplier(1.0);
+	}
 
 	// Clear running timer
 	GetWorld()->GetTimerManager().ClearTimer(PeriodTimerHandle);

@@ -28,7 +28,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> c_SphereComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess="true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FCollisionProfileName CollisionProfile = FName("Focus");
 
 	/** Projectile Motion */
@@ -38,6 +38,21 @@ protected:
 	/** Shoot speed, the speed at which the FocusBase is shot out at */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float ShootSpeed = 100.0f;
+
+	/** Max Lifetime, how many seconds the FocusBase will last before being automatically destroyed */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float LifeInSecondsMax = 10.0f;
+
+	/** Current lifetime, how many seconds the FocusBase will last before being automatically destroyed */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	float LifeInSecondsCurr = 10.0f;
+
+	FTimerHandle LifeTimerHandle;
+	
+	/** 
+	* Every tick, decrement a timer. Once the timer has ended, destroy this FocusBase
+	*/
+	void TickLifetimeTimer();
 
 public:	
 	// Called every frame
@@ -60,5 +75,5 @@ public:
 	* Lock the FocusBase in place (cancel velocity)
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
-	void LockInPlace();
+	void LockInPlace(bool bResetLifetime = false);
 };

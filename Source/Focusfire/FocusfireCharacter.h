@@ -10,6 +10,8 @@
 #include "GameplayTagContainer.h"
 #include "FocusfireCharacter.generated.h"
 
+struct FGameplayAbilitySpecHandle;
+class UGameplayAbility;
 struct FAbilityEndedData;
 class AFocusBase;
 class USpringArmComponent;
@@ -92,6 +94,10 @@ protected:
 	/** Called for using focus abilities input */
 	void UseFocusAbility(const FInputActionValue& Value);
 
+	/** Called for using focus abilities input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	float DefaultGravityScale = 1.75f;
+
 protected: /* Switching camera POV */
 	/** 
 	* Based on the POV of the CurrentCamera, lerp the in-between position
@@ -118,27 +124,35 @@ protected: /* Switching camera POV */
 	void SwitchCameraEnd();
 
 protected: /* FocusBase under crosshair */
-	/** Length of distance where raycast to check for "focus" extends */
+	/** The range at which a FocusBase's ability is use-able */
 	UPROPERTY(BlueprintReadWrite, Category = "FocusfireCharacter")
-	float RangeOfFocusRaycast = 2000.0f;
+	float RangeOfFocusAbilityUseable = 100.0f;
 	
-	/** The current "focus" in range, under crosshair */
+	/** The range at which a FocusBase is dash-able to */
+	UPROPERTY(BlueprintReadWrite, Category = "FocusfireCharacter")
+	float RangeOfDashableToFocusRaycast = 2000.0f;
+	
+	/** The current FocusBase in range that can be dashed to with "GameplayAbility.Focus.Dash", under crosshair */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
-	AFocusBase* CurrentFocusInRange;
+	AFocusBase* CurrentDashableToFocus;
 	
 	/** 
-	* Called every Tick(), during the gameplay ability "focus period". Sets CurrentFocusInRange, if there is any focus
+	* Called every Tick(), during the "GameplayAbility.Focus.Period". Sets CurrentDashableToFocus, if there is any FocusBase
 	* in range
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
-	void OnTickRaycastForFocus();
+	void OnTickRaycastForDashableToFocus();
 
 	/** 
-	* Event that fires if CurrentFocusInRange changes
+	* Event that fires if CurrentDashableToFocus changes
 	*/
 	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
-	FOnFocusInRangeChanged OnFocusInRangeChanged;
+	FOnFocusInRangeChanged OnDashableToFocusChanged;
 
+	/** The current FocusBase within range of using its ability*/
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	AFocusBase* CurrentLockedOnFocus;
+	
 protected: /* Shooting FocusBase */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
@@ -147,6 +161,28 @@ protected: /* GameplayAbilitySystem */
 	/** AbilitySystemComponent **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
+
+	/** The GameplayTag that denotes if the Player is currently in the "GameplayAbility.Focus.Period" state */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag DuringFocusPeriodTag;
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Dash"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputFocusDash();
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Shoot"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputFocusShoot();
+	
+	/** 
+	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
+	* @param ActivatedAbility Contains info about the GameplayAbility that just started
+	*/
+	void OnGameplayAbilityStarted(UGameplayAbility* ActivatedAbility);
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
@@ -183,14 +219,27 @@ public:
 	/** Returns The Ability System Component **/
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
 
-	/** Returns The current focus in range **/
-	FORCEINLINE AFocusBase* GetCurrentFocusInRange() const { return CurrentFocusInRange; }
+	/** Returns The current FocusBase in range to be dashed to **/
+	FORCEINLINE AFocusBase* GetCurrentDashableToFocus() const { return CurrentDashableToFocus; }
+
+	/** Returns The current FocusBase in range to have its ability used **/
+	FORCEINLINE AFocusBase* GetCurrentLockedOnFocus() const { return CurrentLockedOnFocus; }
 
 	/** Returns The arrow component of where to spawn FocusBase **/
 	FORCEINLINE UArrowComponent* GetFocusSpawnArrow() const { return c_FocusShootArrow; }
 	
 	/** Returns The current focus to spawn (to shoot) **/
 	FORCEINLINE TSubclassOf<AFocusBase> GetCurrentFocusToShoot() const { return TypeOfFocusToShoot; }
+
+	/** Returns the range at which a FocusBase's ability is use-able **/
+	FORCEINLINE float GetRangeOfFocusAbilityUseable() const { return RangeOfFocusAbilityUseable; }
+	
+	/** 
+	* Sets the Character's gravity scale (based on its default gravity) by a multiplier
+	* @param NewGravityMultiplier The new gravity multiplier
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	void SetGravityByMultiplier(const float NewGravityMultiplier);
 	
 	/* GameplayAbilitySystem Attributes */
 	UPROPERTY()

@@ -36,7 +36,8 @@ protected:
 	void TickPeriodTimer();
 
 	/** 
-	* Slow down the Player, and any related Actors in a sphere radius
+	* Slow down the Player, and any related Actors in a sphere radius. Also freezes the player in place (if FocusPeriod happens
+	* while a FocusBase is locked on)
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusPeriod")
 	void FocusPeriodStart();

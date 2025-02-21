@@ -44,6 +44,7 @@ AFocusfireCharacter::AFocusfireCharacter()
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+	GetCharacterMovement()->GravityScale = DefaultGravityScale;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	c_CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -96,6 +97,7 @@ void AFocusfireCharacter::BeginPlay()
 	{
 		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		c_AbilitySystemComponent->SetNumericAttributeBase(UAttributeSetHealth::GetHealthAttribute(), 100);
+		c_AbilitySystemComponent->AbilityActivatedCallbacks.AddUObject(this, &AFocusfireCharacter::OnGameplayAbilityStarted);
 		c_AbilitySystemComponent->OnAbilityEnded.AddUObject(this, &AFocusfireCharacter::OnGameplayAbilityEnded);
 	}
 	if (as_HealthAttributeSet)
@@ -108,7 +110,7 @@ void AFocusfireCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	AFocusfireCharacter::OnTickRaycastForFocus();
+	AFocusfireCharacter::OnTickRaycastForDashableToFocus();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -189,8 +191,33 @@ void AFocusfireCharacter::Look(const FInputActionValue& Value)
 
 void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ccc Using Focusfire Ability"));
-	//c_AbilitySystemComponent->TryActivateAbilityByClass(UGameplayAbility_FocusShoot::StaticClass());
+	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
+	{
+		return; // NOT in GameplayAbility.Focus.Period state, so do nothing
+	}
+
+	// Use Ability of currently "locked on" FocusBase
+	if (CurrentLockedOnFocus != nullptr && CurrentLockedOnFocus == CurrentDashableToFocus)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ccc Use FocusBase.GameplayAbility"));
+		return;
+	}
+
+	// Use "GameplayAbility.Focus.Dash" onto the FocusBase under the crosshair
+	if (CurrentDashableToFocus != nullptr)
+	{
+		OnInputFocusDash();
+		UE_LOG(LogTemp, Warning, TEXT("ccc Use GameplayAbility.Focus.Dash"));
+		return;
+	}
+
+	// Use "GameplayAbility.Focus.Shoot" to shoot out the currently selected FocusBase in viewing direction (nothing under crosshair)
+	if (CurrentDashableToFocus == nullptr)
+	{
+		OnInputFocusShoot();
+		UE_LOG(LogTemp, Warning, TEXT("ccc Use GameplayAbility.Focus.Shoot"));
+		return;
+	}
 }
 
 // END Input
@@ -239,7 +266,7 @@ void AFocusfireCharacter::SwitchCameraEnd()
 	flag_isCurrentlySwitchingCamera = false;
 }
 
-void AFocusfireCharacter::OnTickRaycastForFocus()
+void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 {
 	// If Player is not currently have "GameplayAbility.Focus.Period" active, then return
 	if (not (c_AbilitySystemComponent and c_AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsManager::Get().RequestGameplayTag("GameplayAbility.Focus.Period"))))
@@ -248,7 +275,7 @@ void AFocusfireCharacter::OnTickRaycastForFocus()
 	}
 	
 	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
-	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfFocusRaycast;
+	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast;
 	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
 	const FColor _ColorBeforeHit = FColor::Green;
 	const FColor _ColorAfterHit = FColor::Red;
@@ -261,7 +288,7 @@ void AFocusfireCharacter::OnTickRaycastForFocus()
 		UEngineTypes::ConvertToTraceType(ECC_Visibility),
 		false,
 		_ActorsToIgnore,
-		EDrawDebugTrace::ForDuration, // Set to EDrawDebugTrace::None if not debugging
+		EDrawDebugTrace::None, // Set to EDrawDebugTrace::None if not debugging, otherwise EDrawDebugTrace::ForDuration
 		_HitResult,
 		true,
 		_ColorBeforeHit,
@@ -270,32 +297,55 @@ void AFocusfireCharacter::OnTickRaycastForFocus()
 	{
 		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ccc Line trace has hit: %s"), *(_FocusBase->GetName()));
-			CurrentFocusInRange = _FocusBase;
+			CurrentDashableToFocus = _FocusBase;
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ccc Line trace has hit: %s"), *(_HitResult.GetActor()->GetName()));
-			CurrentFocusInRange = nullptr;
+			CurrentDashableToFocus = nullptr;
 		}
 	}
 	else
 	{
-		CurrentFocusInRange = nullptr;
+		CurrentDashableToFocus = nullptr;
 	}
-	OnFocusInRangeChanged.Broadcast(CurrentFocusInRange);
+	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
+}
+
+void AFocusfireCharacter::OnGameplayAbilityStarted(UGameplayAbility* Ability)
+{
+	// During FocusDash ability, disable Player input
+	if (UGameplayAbility_FocusDash* _startedDash = Cast<UGameplayAbility_FocusDash>(Ability))
+	{
+		if (APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController())
+		{
+			DisableInput(_PlayerController);
+		}
+	}
 }
 
 void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& AbilityEndedData)
 {
 	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
 	{
+		CurrentLockedOnFocus = CurrentDashableToFocus; // Lock on to the FocusBase that was just dashed to (allows use of its ability)
 		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
+		if (APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController())
+		{
+			EnableInput(_PlayerController);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("ccc LOCK FOCUS"));
 	}
 	else if (UGameplayAbility_FocusPeriod* _endedPeriod = Cast<UGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))
 	{
+		CurrentLockedOnFocus = nullptr; // Clear any FocusBase that was locked onto
 		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
+		UE_LOG(LogTemp, Warning, TEXT("ccc UN LOCK FOCUS"));
 	}
+}
+
+void AFocusfireCharacter::SetGravityByMultiplier(const float NewGravityMultiplier)
+{
+	GetCharacterMovement()->GravityScale = DefaultGravityScale * NewGravityMultiplier;
 }
 
 void AFocusfireCharacter::HandleHealthChanged(float Magnitude, float NewHealth)

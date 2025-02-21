@@ -7,15 +7,20 @@
 
 AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
 {
+	DashToOffset = DefaultDashToOffset; // Reset offset
+	
 	// Make sure owner actor is a FocusfireCharacter
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
 	{
-		// Get the current "focus" under the crosshair
-		AFocusBase* _dashToFocus = _player->GetCurrentFocusInRange();
-		_dashToFocus->LockInPlace(); // Lock it in place (cancel its velocity)
+		// Get the current FocusBase under the crosshair
+		AFocusBase* _dashToFocus = _player->GetCurrentDashableToFocus();
+		_dashToFocus->LockInPlace(true); // Lock it in place (cancel its velocity) + extend its lifetime
+
+		// Set the offset as decreed by the FocusfireCharacter
+		DashToOffset = _player->GetRangeOfFocusAbilityUseable() - 1.0f;
 
 		UE_LOG(LogTemp, Display, TEXT("ccc DashToFocusInRange"));
-		return _player->GetCurrentFocusInRange();
+		return _player->GetCurrentDashableToFocus();
 	}
 
 	return nullptr;
@@ -33,7 +38,7 @@ bool UGameplayAbility_FocusDash::CanActivateAbility(const FGameplayAbilitySpecHa
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(ActorInfo->AvatarActor))
 	{
 		// Not a nullptr, so there is a valid FocusBase in range
-		if (_player->GetCurrentFocusInRange()) 
+		if (_player->GetCurrentDashableToFocus()) 
 			return true;
 
 		// Is a nullptr, meaning there is NO valid FocusBase to dash to

@@ -31,7 +31,21 @@ AFocusBase::AFocusBase()
 void AFocusBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// Create a timer that ticks down, when over, destroys this FocusBase
+	LifeInSecondsCurr = LifeInSecondsMax;
+	GetWorld()->GetTimerManager().SetTimer(LifeTimerHandle, this, &AFocusBase::TickLifetimeTimer,
+										   1.0f, true);
+}
+
+void AFocusBase::TickLifetimeTimer()
+{
+	LifeInSecondsCurr -= 1; // Timer ticks down by 1 every second
+	if (LifeInSecondsCurr < 1)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LifeTimerHandle); // Clear timer
+		Destroy(); // Destroy this FocusBase
+	}
 }
 
 // Called every frame
@@ -46,7 +60,14 @@ void AFocusBase::ShootInDirection(const FVector Direction)
 	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
 }
 
-void AFocusBase::LockInPlace()
+void AFocusBase::LockInPlace(bool bResetLifetime)
 {
 	c_ProjectileMovementComponent->Velocity = FVector(0, 0, 0);
+	c_ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
+
+	// If flag to reset lifetime is set, then reset lifetime of FocusBase
+	if (bResetLifetime)
+	{
+		LifeInSecondsCurr = LifeInSecondsMax;
+	}
 }
