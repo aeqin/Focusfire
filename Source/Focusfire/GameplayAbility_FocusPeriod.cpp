@@ -4,6 +4,7 @@
 #include "GameplayAbility_FocusPeriod.h"
 
 #include "FocusfireCharacter.h"
+#include "FocusPeriodSlowZone.h"
 #include "Chaos/SoftsExternalForces.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -25,10 +26,7 @@ void UGameplayAbility_FocusPeriod::TickPeriodTimer()
 
 void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 {
-	// Slow down Player while in focus period ability
-	CurrentActorInfo->AvatarActor->CustomTimeDilation = SlowTimeDilation;
-
-	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
 	{
 		if (_player->GetFocusSpawnArrow())
 		{
@@ -38,19 +36,36 @@ void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 			UE_LOG(LogTemp, Warning, TEXT("ccc FREEZE PLAYER DURING LOCKED FOCUS"));
 		}
 	}
-	
-	// TODO: Also slow down other FocusBase/Player's in radius?
+
+	// Valid AActor
+	AActor* _actor = CurrentActorInfo->AvatarActor.Get();
+	if (_actor)
+	{
+		// Spawn an area of effect that also slows down other FocusBase/Player's in radius
+		
+		SpawnedFocusedPeriodSlowZone = GetWorld()->SpawnActorDeferred<AFocusPeriodSlowZone>(AFocusPeriodSlowZone::StaticClass(), _actor->GetTransform(), _actor->GetOwner(), _actor->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		if (IsValid(SpawnedFocusedPeriodSlowZone))
+		{
+			SpawnedFocusedPeriodSlowZone->AttachToActor(_actor, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			SpawnedFocusedPeriodSlowZone->RadiusOfSlowEffect = SlowTimeRadius;
+			SpawnedFocusedPeriodSlowZone->StrengthOfTimeSlowdown = SlowTimeDilation;
+			SpawnedFocusedPeriodSlowZone->FinishSpawning(_actor->GetTransform());
+		}
+	}
 }
 
 void UGameplayAbility_FocusPeriod::FocusPeriodEnd()
 {
-	// Return Player back to normal time
-	CurrentActorInfo->AvatarActor->CustomTimeDilation = 1;
-
 	// Set Player gravity back to default
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
 	{
 		_player->SetGravityByMultiplier(1.0);
+	}
+
+	// Destroy the area of effect that slows down Player and FocusBase
+	if (IsValid(SpawnedFocusedPeriodSlowZone))
+	{
+		SpawnedFocusedPeriodSlowZone->Destroy();
 	}
 
 	// Clear running timer

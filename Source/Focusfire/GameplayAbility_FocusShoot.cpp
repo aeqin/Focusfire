@@ -9,7 +9,7 @@
 
 void UGameplayAbility_FocusShoot::SpawnFocusToShoot()
 {
-	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
 	{
 		FTransform _spawnTransform = _player->GetFocusSpawnArrow()->GetComponentTransform();
 		TSubclassOf<AFocusBase> _typeOfFocusToSpawn = _player->GetCurrentFocusToShoot();

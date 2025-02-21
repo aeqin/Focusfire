@@ -6,6 +6,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "GameplayAbility_FocusPeriod.generated.h"
 
+class AFocusPeriodSlowZone;
 /**
  * 
  */
@@ -18,17 +19,26 @@ public:
 	UGameplayAbility_FocusPeriod();
 
 protected:
-	// How long the "focus" state will last
+	/** How slow should the time be during "focus" state */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SlowTimeDilation = 0.2f;
+
+	/** How slow should the time be during "focus" state */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float SlowTimeRadius = 2000.0f;
+	
+	/** The sphere area of effect that slows down AActors */
+	UPROPERTY(BlueprintReadOnly)
+	AFocusPeriodSlowZone* SpawnedFocusedPeriodSlowZone;
+	
+	
+	/** How long the "focus" state will last */
 	UPROPERTY(EditAnywhere)
 	int32 MaxLengthOfFocusPeriodTime;
 	
 	int32 TimeLeftOfFocusPeriodTime;
 
 	FTimerHandle PeriodTimerHandle;
-
-	// How slow should the time be during "focus" state
-	UPROPERTY(EditAnywhere)
-	float SlowTimeDilation = 0.2f;
 
 	/** 
 	* Every second, decrement a timer. Once the timer has ended, end the "focus period" ability
