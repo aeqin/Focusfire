@@ -10,6 +10,8 @@
 
 class UProjectileMovementComponent;
 class USphereComponent;
+class UNiagaraComponent;
+class UNiagaraSystem;
 
 UCLASS()
 class FOCUSFIRE_API AFocusBase : public AActor, public IAbilitySystemInterface
@@ -25,26 +27,34 @@ protected:
 	virtual void BeginPlay() override;
 
 	/** Sphere collision */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> c_SphereComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	FCollisionProfileName CollisionProfile = FName("Focus");
 
+	/** Component to hold VFX that represents FocusBase in game */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNiagaraComponent> c_NiagaraComponent_RepresentingVFX;
+
+	/** VFX to represent FocusBase in game */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNiagaraSystem> NiagaraSystem_RepresentingVFX;
+	
 	/** Projectile Motion */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	UProjectileMovementComponent* c_ProjectileMovementComponent;
 	
 	/** Shoot speed, the speed at which the FocusBase is shot out at */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float ShootSpeed = 100.0f;
 
 	/** Max Lifetime, how many seconds the FocusBase will last before being automatically destroyed */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float LifeInSecondsMax = 10.0f;
 
 	/** Current lifetime, how many seconds the FocusBase will last before being automatically destroyed */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float LifeInSecondsCurr = 10.0f;
 
 	FTimerHandle LifeTimerHandle;
@@ -76,4 +86,10 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
 	void LockInPlace(bool bResetLifetime = false);
+
+	/** 
+	* Activate the special ability of this FocusBase (overridden in children)
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	virtual void ActivateAbility();
 };

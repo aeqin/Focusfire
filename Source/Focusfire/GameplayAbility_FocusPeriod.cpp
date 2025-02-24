@@ -28,7 +28,7 @@ void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 {
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
 	{
-		if (_player->GetFocusSpawnArrow())
+		if (_player->GetCurrentLockedOnFocus())
 		{
 			// Disable Player gravity & set velocity to zero
 			_player->SetGravityByMultiplier(0.0);

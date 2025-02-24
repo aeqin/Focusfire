@@ -154,7 +154,7 @@ protected: /* FocusBase under crosshair */
 	AFocusBase* CurrentLockedOnFocus;
 	
 protected: /* Shooting FocusBase */
-	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
 	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
 	
 protected: /* GameplayAbilitySystem */
@@ -177,6 +177,12 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnInputFocusShoot();
+
+	/** 
+	* Event that is fired when BP should try to activate the custom "GameplayAbility" of the locked on FocusBase
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputFocusBaseActivateAbility(AFocusBase* LockedOnFocus);
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent

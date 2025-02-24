@@ -199,6 +199,7 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 	// Use Ability of currently "locked on" FocusBase
 	if (CurrentLockedOnFocus != nullptr && CurrentLockedOnFocus == CurrentDashableToFocus)
 	{
+		OnInputFocusBaseActivateAbility(CurrentLockedOnFocus);
 		UE_LOG(LogTemp, Warning, TEXT("ccc Use FocusBase.GameplayAbility"));
 		return;
 	}
