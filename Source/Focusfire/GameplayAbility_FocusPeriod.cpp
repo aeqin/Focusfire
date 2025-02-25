@@ -26,17 +26,6 @@ void UGameplayAbility_FocusPeriod::TickPeriodTimer()
 
 void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 {
-	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
-	{
-		if (_player->GetCurrentLockedOnFocus())
-		{
-			// Disable Player gravity & set velocity to zero
-			_player->SetGravityByMultiplier(0.0);
-			_player->GetCharacterMovement()->Velocity = FVector(0, 0, 0);
-			UE_LOG(LogTemp, Warning, TEXT("ccc FREEZE PLAYER DURING LOCKED FOCUS"));
-		}
-	}
-
 	// Valid AActor
 	AActor* _actor = CurrentActorInfo->AvatarActor.Get();
 	if (_actor)
@@ -50,6 +39,21 @@ void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 			SpawnedFocusedPeriodSlowZone->RadiusOfSlowEffect = SlowTimeRadius;
 			SpawnedFocusedPeriodSlowZone->StrengthOfTimeSlowdown = SlowTimeDilation;
 			SpawnedFocusedPeriodSlowZone->FinishSpawning(_actor->GetTransform());
+		}
+	}
+	
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
+	{
+		if (_player->GetCurrentLockedOnFocus())
+		{
+			// Disable Player gravity & set velocity to zero
+			_player->SetGravityByMultiplier(0.0);
+			_player->GetCharacterMovement()->Velocity = FVector(0, 0, 0);
+			UE_LOG(LogTemp, Warning, TEXT("ccc FREEZE PLAYER DURING LOCKED FOCUS"));
+
+			// As Player is "locked" in place to a FocusBase, reset Player's time dilation, to allow Player to pivot around
+			// FocusBase at normal speed
+			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(_player, true);
 		}
 	}
 }

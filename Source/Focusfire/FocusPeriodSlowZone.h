@@ -24,6 +24,10 @@ class FOCUSFIRE_API AFocusPeriodSlowZone : public AActor
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSet<AActor*> Set_SlowdownActors;
 
+	/** The set of AActors that are ignored from slowdown by the FocusPeriodSlowZone */
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	TSet<AActor*> Set_IgnoreSlowdownActors;
+
 public:	
 	// Sets default values for this actor's properties
 	AFocusPeriodSlowZone();
@@ -35,6 +39,14 @@ public:
 	/** The time dilation to slow down affected AActors by */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusPeriodSlowZone")
 	float StrengthOfTimeSlowdown = 0.1f;
+
+	/**
+	 * Either add / remove an Actor to ignore for the time slow down
+	 * @param ActorToIgnore: A pointer to the AActor that should not be slowed down
+	 * @param bDoAddException: Whether or not the particular actor should not be slowed down, or if previously excepted, slowed down
+	 */
+	UFUNCTION()
+	void SetActorSlowdownException(AActor* ActorToIgnore, bool bDoAddException);
 
 protected:
 	// Called when the game starts or when spawned

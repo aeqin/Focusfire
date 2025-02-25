@@ -92,6 +92,8 @@ AFocusfireCharacter::AFocusfireCharacter()
 void AFocusfireCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	FirstPersonPOVCameraOffset = GetActorLocation() - GetFirstPOVCamera()->GetComponentLocation();
 	
 	if (c_AbilitySystemComponent)
 	{
@@ -158,7 +160,11 @@ void AFocusfireCharacter::Move(const FInputActionValue& Value)
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	if (
+			Controller != nullptr
+		&&
+			CurrentLockedOnFocus == nullptr // Only allow move if not currently "locked-on" to a FocusBase
+	)
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
@@ -186,6 +192,9 @@ void AFocusfireCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+		
+		// If Player is currently locked onto a FocusBase, then pivot Player/camera around it
+		PivotAroundLockedFocus();
 	}
 }
 
@@ -312,6 +321,23 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
 }
 
+void AFocusfireCharacter::PivotAroundLockedFocus()
+{
+	// Return if there is no "locked-on" FocusBase
+	if (not IsValid(CurrentLockedOnFocus))
+		return;
+	
+	// Vector from Player to Player's first-person POV camera
+	FirstPersonPOVCameraOffset = GetActorLocation() - GetFirstPOVCamera()->GetComponentLocation();
+		
+	// Current rotation of Controller
+	const FRotator _currRot = Controller->GetControlRotation();
+
+	// Set the position of the Player to pivot around the "locked-on" FocusBase while looking with the first-person POV camera
+	const FVector _nextPosition = (CurrentLockedOnFocus->GetActorLocation() + FirstPersonPOVCameraOffset) - _currRot.Vector() * LockedOnFocusDistance;
+	SetActorLocation(_nextPosition);
+}
+
 void AFocusfireCharacter::OnGameplayAbilityStarted(UGameplayAbility* Ability)
 {
 	// During FocusDash ability, disable Player input
@@ -328,12 +354,19 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 {
 	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
 	{
-		CurrentLockedOnFocus = CurrentDashableToFocus; // Lock on to the FocusBase that was just dashed to (allows use of its ability)
-		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
+		// Lock on to the FocusBase that was just dashed to (allows use of its ability)
+		CurrentLockedOnFocus = CurrentDashableToFocus;
+		LockedOnFocusDistance = (CurrentLockedOnFocus->GetActorLocation() - GetActorLocation()).Length();
+		PivotAroundLockedFocus();
+		
+		// Re-enable input after "GameplayAbility.Focus.Dash"
 		if (APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController())
 		{
 			EnableInput(_PlayerController);
 		}
+
+		// BP handles activating "GameplayAbility.Focus.Period" right after
+		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
 		UE_LOG(LogTemp, Warning, TEXT("ccc LOCK FOCUS"));
 	}
 	else if (UGameplayAbility_FocusPeriod* _endedPeriod = Cast<UGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))

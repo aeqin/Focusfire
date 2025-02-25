@@ -19,11 +19,11 @@ class FOCUSFIRE_API UGameplayAbility_FocusDash : public UGameplayAbility
 protected:
 	/** Default how close to dash to a FocusBase (stop this distance away) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusDash")
-	float DefaultDashToOffset = 100.0f;
+	float DefaultDashToOffsetX = 100.0f;
 	
 	/** How close to dash to a FocusBase (stop this distance away) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusDash")
-	float DashToOffset = 100.0f;
+	float DashToOffsetX = 100.0f;
 
 	/** How long does it take to dash to a FocusBase */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusDash")

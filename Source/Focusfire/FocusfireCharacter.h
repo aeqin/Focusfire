@@ -94,9 +94,13 @@ protected:
 	/** Called for using focus abilities input */
 	void UseFocusAbility(const FInputActionValue& Value);
 
-	/** Called for using focus abilities input */
+	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	float DefaultGravityScale = 1.75f;
+
+	/** The offset from the first-person POV camera to the Player's position. */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	FVector FirstPersonPOVCameraOffset;
 
 protected: /* Switching camera POV */
 	/** 
@@ -149,9 +153,21 @@ protected: /* FocusBase under crosshair */
 	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
 	FOnFocusInRangeChanged OnDashableToFocusChanged;
 
-	/** The current FocusBase within range of using its ability*/
+	/** The current FocusBase within range of using its ability */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	AFocusBase* CurrentLockedOnFocus;
+
+	/**
+	 * The initial distance from a locked on FocusBase. Used to keep Player the same distance away from a "locked-on"
+	 * FocusBase while pivoting around it
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	float LockedOnFocusDistance;
+
+	/** 
+	* Called in Look(), if Player has a "locked-on" FocusBase, then pivot Player around it
+	*/
+	void PivotAroundLockedFocus();
 	
 protected: /* Shooting FocusBase */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")

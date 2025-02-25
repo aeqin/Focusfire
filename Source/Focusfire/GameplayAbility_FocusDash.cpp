@@ -7,7 +7,7 @@
 
 AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
 {
-	DashToOffset = DefaultDashToOffset; // Reset offset
+	DashToOffsetX = DefaultDashToOffsetX; // Reset offset
 	
 	// Make sure owner actor is a FocusfireCharacter
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor))
@@ -17,7 +17,7 @@ AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
 		_dashToFocus->LockInPlace(true); // Lock it in place (cancel its velocity) + extend its lifetime
 
 		// Set the offset as decreed by the FocusfireCharacter
-		DashToOffset = _player->GetRangeOfFocusAbilityUseable() - 1.0f;
+		DashToOffsetX = _player->GetRangeOfFocusAbilityUseable() - 1.0f;
 
 		UE_LOG(LogTemp, Display, TEXT("ccc DashToFocusInRange"));
 		return _player->GetCurrentDashableToFocus();

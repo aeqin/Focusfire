@@ -22,6 +22,26 @@ AFocusPeriodSlowZone::AFocusPeriodSlowZone()
 	c_SphereOfSlowEffect->SetHiddenInGame(false); // Set visible in game for debugging
 }
 
+void AFocusPeriodSlowZone::SetActorSlowdownException(AActor* ActorToIgnore, bool bDoAddException)
+{
+	if (bDoAddException)
+	{
+		Set_IgnoreSlowdownActors.Add(ActorToIgnore);
+
+		// Being ignored, so make sure time dilation is set back to default
+		ActorToIgnore->CustomTimeDilation = 1.0;
+		Set_SlowdownActors.Remove(ActorToIgnore);
+	}
+	else
+	{
+		Set_IgnoreSlowdownActors.Remove(ActorToIgnore);
+
+		// No longer being ignore, so slow down
+		ActorToIgnore->CustomTimeDilation = StrengthOfTimeSlowdown;
+		Set_SlowdownActors.Add(ActorToIgnore);
+	}
+}
+
 // Called when the game starts or when spawned
 void AFocusPeriodSlowZone::BeginPlay()
 {
