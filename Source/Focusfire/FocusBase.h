@@ -64,6 +64,14 @@ protected:
 	*/
 	void TickLifetimeTimer();
 
+	/** Whether this FocusBase can be "locked-on" by the player (FocusfireCharacter) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	bool flag_Interactable = true;
+
+	/** The default damage that this FocusBase deals */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	float DamageDefault = 100.0f;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -89,7 +97,17 @@ public:
 
 	/** 
 	* Activate the special ability of this FocusBase (overridden in children)
+	* @param Activator: The AActor that activated this ability
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
-	virtual void ActivateAbility();
+	virtual void ActivateAbility(const AActor* Activator);
+
+public:
+	/** Getters */
+	
+	/** 
+	* @returns Whether the player can interact with this FocusBase
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	FORCEINLINE bool GetCanBeInteractedWith() const { return flag_Interactable; }
 };

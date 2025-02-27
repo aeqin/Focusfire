@@ -60,9 +60,9 @@ void AFocusBase::TickLifetimeTimer()
 	}
 }
 
-void AFocusBase::ActivateAbility()
+void AFocusBase::ActivateAbility(const AActor* Activator)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ccc Activating %s Ability"), *GetName());
+	UE_LOG(LogTemp, Warning, TEXT("ccc [%s] Activating %s Ability"), *Activator->GetName(), *GetName());
 	// Override in children
 }
 

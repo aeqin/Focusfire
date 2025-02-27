@@ -278,18 +278,21 @@ void AFocusfireCharacter::SwitchCameraEnd()
 
 void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 {
-	// If Player is not currently have "GameplayAbility.Focus.Period" active, then return
+	// If Player does not currently have "GameplayAbility.Focus.Period" active, then return
 	if (not (c_AbilitySystemComponent and c_AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsManager::Get().RequestGameplayTag("GameplayAbility.Focus.Period"))))
 	{
 		return;
 	}
-	
+
+	// Begin with potential FocusBase set as nullptr
+	CurrentDashableToFocus = nullptr;
+
+	// Attempt to raycast a valid FocusBase to dash to
 	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
 	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast;
 	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
 	const FColor _ColorBeforeHit = FColor::Green;
 	const FColor _ColorAfterHit = FColor::Red;
-
 	FHitResult _HitResult;
 	if (UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
@@ -307,16 +310,9 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 	{
 		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
 		{
-			CurrentDashableToFocus = _FocusBase;
+			if (_FocusBase->GetCanBeInteractedWith())
+				CurrentDashableToFocus = _FocusBase; // Actually set FocusBase
 		}
-		else
-		{
-			CurrentDashableToFocus = nullptr;
-		}
-	}
-	else
-	{
-		CurrentDashableToFocus = nullptr;
 	}
 	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
 }
