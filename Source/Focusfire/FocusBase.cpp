@@ -4,6 +4,8 @@
 #include "FocusBase.h"
 #include "FocusBase.h"
 #include "AbilitySystemComponent.h"
+#include "FocusfireCharacter.h"
+#include "FocusPeriodSlowZone.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "NiagaraComponent.h"
@@ -43,6 +45,13 @@ void AFocusBase::BeginPlay()
 	GetWorld()->GetTimerManager().SetTimer(LifeTimerHandle, this, &AFocusBase::TickLifetimeTimer,
 										   1.0f, true);
 
+	// Subscribe to the OnComponentOverlap events
+	if (c_SphereComponent)
+	{
+		c_SphereComponent->OnComponentBeginOverlap.AddDynamic(this, &AFocusBase::OnFocusBaseActorEntered);
+		c_SphereComponent->OnComponentEndOverlap.AddDynamic(this, &AFocusBase::OnFocusBaseActorExited);
+	}
+	
 	// Add in NiagaraSystem for VFX representing FocusBase in-game
 	if (NiagaraSystem_RepresentingVFX)
 	{
@@ -64,6 +73,37 @@ void AFocusBase::ActivateAbility(const AActor* Activator)
 {
 	UE_LOG(LogTemp, Warning, TEXT("ccc [%s] Activating %s Ability"), *Activator->GetName(), *GetName());
 	// Override in children
+}
+
+void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	// Do NOT be destroyed if overlapping a FocusPeriodSlowZone
+	if (AFocusPeriodSlowZone* _slowTrigger = Cast<AFocusPeriodSlowZone>(OtherActor))
+	{
+		return;
+	}
+	
+	// Do NOT be destroyed if overlapping a FocusfireCharacter
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(OtherActor))
+	{
+		return;
+	}
+
+	// Spawn VFX for hitting something
+	if (NiagaraSystem_HitVFX)
+	{
+		UNiagaraComponent* _hitParticles = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraSystem_HitVFX, GetActorLocation(), SweepResult.ImpactNormal.Rotation());
+		_hitParticles->AddRelativeRotation(FRotator(90, 0, 0));
+	}
+	
+	Destroy();
+}
+
+void AFocusBase::OnFocusBaseActorExited(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	
 }
 
 // Called every frame

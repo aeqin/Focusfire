@@ -234,7 +234,7 @@ public:
 	FORCEINLINE UCameraComponent* GetFirstPOVCamera() const { return c_FirstPOVCamera; }
 	/** Returns The current POV Camera **/
 	FORCEINLINE UCameraComponent* GetCurrentCamera() const { return CurrentCamera; }
-	
+	/** Returns whether Player is currently in first-person camera POV **/
 	UFUNCTION(BlueprintPure, Category = "FocusfireCharacter")
 	FORCEINLINE bool GetCameraIsCurrentlyFirstPersonPOV() const { return CurrentCamera == c_FirstPOVCamera; }
 
@@ -255,6 +255,14 @@ public:
 
 	/** Returns the range at which a FocusBase's ability is use-able **/
 	FORCEINLINE float GetRangeOfFocusAbilityUseable() const { return RangeOfFocusAbilityUseable; }
+
+	/** 
+	* Gets the Player's potential position from the locked-on focus given the ideal distance (& current camera rotation)
+	* @param LockedFocus: The FocusBase to potentially pivot around
+	* @param IdealDistance: The distance from the FocusBase to pivot around
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	FVector GetPlayerPivotPosAroundLockedFocus(const AFocusBase* LockedFocus, const float IdealDistance);
 	
 	/** 
 	* Sets the Character's gravity scale (based on its default gravity) by a multiplier

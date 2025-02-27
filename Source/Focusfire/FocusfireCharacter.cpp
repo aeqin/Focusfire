@@ -322,15 +322,9 @@ void AFocusfireCharacter::PivotAroundLockedFocus()
 	// Return if there is no "locked-on" FocusBase
 	if (not IsValid(CurrentLockedOnFocus))
 		return;
-	
-	// Vector from Player to Player's first-person POV camera
-	FirstPersonPOVCameraOffset = GetActorLocation() - GetFirstPOVCamera()->GetComponentLocation();
-		
-	// Current rotation of Controller
-	const FRotator _currRot = Controller->GetControlRotation();
 
 	// Set the position of the Player to pivot around the "locked-on" FocusBase while looking with the first-person POV camera
-	const FVector _nextPosition = (CurrentLockedOnFocus->GetActorLocation() + FirstPersonPOVCameraOffset) - _currRot.Vector() * LockedOnFocusDistance;
+	const FVector _nextPosition = GetPlayerPivotPosAroundLockedFocus(CurrentLockedOnFocus, LockedOnFocusDistance);
 	SetActorLocation(_nextPosition);
 }
 
@@ -371,6 +365,20 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
 		UE_LOG(LogTemp, Warning, TEXT("ccc UN LOCK FOCUS"));
 	}
+}
+
+FVector AFocusfireCharacter::GetPlayerPivotPosAroundLockedFocus(const AFocusBase* LockedFocus, const float IdealDistance)
+{
+	// Vector from Player to Player's first-person POV camera
+	FirstPersonPOVCameraOffset = GetActorLocation() - GetFirstPOVCamera()->GetComponentLocation();
+		
+	// Current rotation of Controller
+	const FRotator _currRot = Controller->GetControlRotation();
+
+	// Get the position of the Player to pivot around the "locked-on" FocusBase while looking with the first-person POV camera
+	const FVector _nextPosition = (LockedFocus->GetActorLocation() + FirstPersonPOVCameraOffset) - _currRot.Vector() * IdealDistance;
+
+	return _nextPosition;
 }
 
 void AFocusfireCharacter::SetGravityByMultiplier(const float NewGravityMultiplier)
