@@ -148,6 +148,9 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Using focus ability
 		EnhancedInputComponent->BindAction(UseFocusAbilityAction, ETriggerEvent::Started, this, &AFocusfireCharacter::UseFocusAbility);
+
+		// Cancel a "locked-on" FocusBase during "GameplayAbility.Focus.Period"
+		EnhancedInputComponent->BindAction(CancelLockedFocusAction, ETriggerEvent::Started, this, &AFocusfireCharacter::CancelLockedFocus);
 	}
 	else
 	{
@@ -228,6 +231,18 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 		UE_LOG(LogTemp, Warning, TEXT("ccc Use GameplayAbility.Focus.Shoot"));
 		return;
 	}
+}
+
+void AFocusfireCharacter::CancelLockedFocus(const FInputActionValue& Value)
+{
+	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
+	{
+		return; // NOT in GameplayAbility.Focus.Period state, so do nothing
+	}
+
+	// Unlock the "locked-on" FocusBase, to prevent pivoting around it anymore
+	CurrentLockedOnFocus = nullptr;
+	OnInputFocusPeriodCancelLocked(); // Will signal BP to "input cancel" the "GameplayAbility.Focus.Period", which will re-slowdown the Player
 }
 
 // END Input

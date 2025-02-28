@@ -58,6 +58,21 @@ void UGameplayAbility_FocusPeriod::FocusPeriodStart()
 	}
 }
 
+void UGameplayAbility_FocusPeriod::FocusPeriodCancelLock()
+{
+	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
+	{
+		if (_player->GetCurrentLockedOnFocus() == nullptr) // Player itself will unset its CurrentLockedOnFocus
+		{
+			// Re-enable Player gravity
+			_player->SetGravityByMultiplier(1.0);
+
+			// As Player is no longer "locked" in place to a FocusBase, re-slow down Player's time dilation
+			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(_player, false);
+		}
+	}
+}
+
 void UGameplayAbility_FocusPeriod::FocusPeriodEnd()
 {
 	// Set Player gravity back to default

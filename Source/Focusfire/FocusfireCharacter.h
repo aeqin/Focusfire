@@ -75,6 +75,10 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* UseFocusAbilityAction;
 
+	/** Cancel "locked-on" FocusBase Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* CancelLockedFocusAction;
+
 public:
 	AFocusfireCharacter();
 	virtual void BeginPlay() override;
@@ -94,6 +98,9 @@ protected:
 	/** Called for using focus abilities input */
 	void UseFocusAbility(const FInputActionValue& Value);
 
+	/** Called for cancelling "lock-on" FocusBase input */
+	void CancelLockedFocus(const FInputActionValue& Value);
+	
 	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	float DefaultGravityScale = 1.75f;
@@ -199,6 +206,12 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnInputFocusBaseActivateAbility(AFocusBase* LockedOnFocus);
+
+	/** 
+	* Event that is fired when BP should try to cancel a "locked-on" FocusBase
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputFocusPeriodCancelLocked();
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent

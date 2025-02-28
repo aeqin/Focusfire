@@ -53,6 +53,12 @@ protected:
 	void FocusPeriodStart();
 
 	/** 
+	* Un-freeze the player locked in place, and re-add player to be once again slowed by SpawnedFocusedPeriodSlowZone
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusPeriod")
+	void FocusPeriodCancelLock();
+	
+	/** 
 	* Return the Player to normal speed
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusPeriod")
