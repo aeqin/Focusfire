@@ -113,6 +113,12 @@ void AFocusfireCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	AFocusfireCharacter::OnTickRaycastForDashableToFocus();
+
+	// If Player is currently locked onto a FocusBase, then pivot Player/camera around it
+	if (IsValid(CurrentLockedOnFocus))
+	{
+		AFocusfireCharacter::PivotAroundLockedFocus();
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -195,9 +201,6 @@ void AFocusfireCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
-		
-		// If Player is currently locked onto a FocusBase, then pivot Player/camera around it
-		PivotAroundLockedFocus();
 	}
 }
 

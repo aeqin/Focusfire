@@ -172,8 +172,9 @@ protected: /* FocusBase under crosshair */
 	float LockedOnFocusDistance;
 
 	/** 
-	* Called in Look(), if Player has a "locked-on" FocusBase, then pivot Player around it
+	* If Player has a "locked-on" FocusBase, then pivot Player around it
 	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void PivotAroundLockedFocus();
 	
 protected: /* Shooting FocusBase */
