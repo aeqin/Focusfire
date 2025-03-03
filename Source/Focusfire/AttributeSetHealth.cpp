@@ -4,10 +4,13 @@
 #include "AttributeSetHealth.h"
 #include "GameplayEffectExtension.h"
 
-void UAttributeSetHealth::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)
+void UAttributeSetHealth::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
-	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	Super::PreAttributeChange(Attribute, NewValue);
+
+	if(Attribute == GetHealthAttribute())
 	{
-		OnHealthChanged.Broadcast(Data.EvaluatedData.Magnitude, GetHealth());
+		// Clamp Health between 0 and max Health
+		NewValue = FMath::Clamp<float>(NewValue, 0, GetMaxHealth());
 	}
 }

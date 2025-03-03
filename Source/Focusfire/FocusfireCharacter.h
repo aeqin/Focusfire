@@ -8,8 +8,10 @@
 #include "AbilitySystemInterface.h"
 #include "FocusBase.h"
 #include "GameplayTagContainer.h"
+#include "GameplayEffectTypes.h"
 #include "FocusfireCharacter.generated.h"
 
+struct FGameplayAttribute;
 struct FGameplayAbilitySpecHandle;
 class UGameplayAbility;
 struct FAbilityEndedData;
@@ -78,7 +80,7 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	/** Cancel "locked-on" FocusBase Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CancelLockedFocusAction;
-
+	
 public:
 	AFocusfireCharacter();
 	virtual void BeginPlay() override;
@@ -237,6 +239,25 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnFocusPeriodEnded(const bool bWasCancelled);
+
+	/** 
+	* When Player's Health is changed, handle it
+	* @param HealthAttribute: AttributeSetHealth, contains Health and MaxHealth
+	* @return
+	*/
+	void HandleHealthChanged(const FOnAttributeChangeData& HealthAttribute);
+
+	/** The GameplayTag that denotes if the Player is currently in the "GameplayAbility.Focus.Period" state */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag GameplayEffect_Damage_Tag;
+	
+	/** 
+	* Event that is fired when the Player dies
+	* @param Killer: The AActor that is responsible for killing the Player
+	* @param DeathDamage: The amount of damage that killed the Player
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnDeath(AActor* Killer, float DeathDamage);
 	
 public:
 	/** Cameras **/
@@ -286,16 +307,7 @@ public:
 	void SetGravityByMultiplier(const float NewGravityMultiplier);
 	
 	/* GameplayAbilitySystem Attributes */
-	UPROPERTY()
-	TObjectPtr<UAttributeSetHealth> as_HealthAttributeSet;
-
-	/** 
-	* When Player's Health is changed, handle it
-	* @param Magnitude: How much is the Health changed by
-	* @param NewHealth: The new Health
-	* @return
-	*/
-	UFUNCTION()
-	void HandleHealthChanged(float Magnitude, float NewHealth);
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	const UAttributeSetHealth* AttributeSet_HealthAttributeSet;
 };
 

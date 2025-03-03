@@ -51,7 +51,7 @@ protected:
 	
 	/** Shoot speed, the speed at which the FocusBase is shot out at */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
-	float ShootSpeed = 100.0f;
+	float ShootSpeed = 1000.0f;
 
 	/** Max Lifetime, how many seconds the FocusBase will last before being automatically destroyed */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))

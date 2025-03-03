@@ -16,18 +16,19 @@ class FOCUSFIRE_API UAttributeSetHealth : public UAttributeSetBase
 	GENERATED_BODY()
 
 public: /* Properties */
-	UPROPERTY()
-	FAttributeAfterEffectEvent OnHealthChanged;
-	 
 	UPROPERTY(BlueprintReadWrite, Category = "AttributeSet")
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UAttributeSetHealth, Health);
 
+	UPROPERTY(BlueprintReadWrite, Category = "AttributeSet")
+	FGameplayAttributeData MaxHealth;
+	ATTRIBUTE_ACCESSORS(UAttributeSetHealth, MaxHealth);
 public: /* Functions */
 	/** 
-	* Overriding PostGameplayEffectExecute to broadcast FAttributeAfterEffectEvent after the Health value is changed
-	* @param Data struct FGameplayEffectModCallbackData
+	* Overriding PreAttributeChange to clamp health values
+	* @param Attribute The specific attribute being set
+	* @param NewValue The new value to potentially set attribute to
 	* @return
 	*/
-	virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
+	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 };

@@ -17,6 +17,7 @@
 #include "GameplayAbility_FocusDash.h"
 #include "GameplayAbility_FocusPeriod.h"
 #include "GameplayAbility_FocusShoot.h"
+#include "GameplayEffectExtension.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
 
@@ -86,7 +87,7 @@ AFocusfireCharacter::AFocusfireCharacter()
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 
 	// Create an initialize AttributeSets
-	as_HealthAttributeSet = CreateDefaultSubobject<UAttributeSetHealth>(TEXT("HealthAttributeSet"));
+	AttributeSet_HealthAttributeSet = CreateDefaultSubobject<UAttributeSetHealth>(TEXT("HealthAttributeSet"));
 }
 
 void AFocusfireCharacter::BeginPlay()
@@ -98,13 +99,14 @@ void AFocusfireCharacter::BeginPlay()
 	if (c_AbilitySystemComponent)
 	{
 		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		c_AbilitySystemComponent->SetNumericAttributeBase(UAttributeSetHealth::GetHealthAttribute(), 100);
 		c_AbilitySystemComponent->AbilityActivatedCallbacks.AddUObject(this, &AFocusfireCharacter::OnGameplayAbilityStarted);
 		c_AbilitySystemComponent->OnAbilityEnded.AddUObject(this, &AFocusfireCharacter::OnGameplayAbilityEnded);
-	}
-	if (as_HealthAttributeSet)
-	{
-		as_HealthAttributeSet->OnHealthChanged.AddDynamic(this, &AFocusfireCharacter::HandleHealthChanged);
+
+		if (AttributeSet_HealthAttributeSet)
+		{
+			AttributeSet_HealthAttributeSet = c_AbilitySystemComponent->GetSet<UAttributeSetHealth>();
+			c_AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet_HealthAttributeSet->GetHealthAttribute()).AddUObject(this, &AFocusfireCharacter::HandleHealthChanged);
+		}
 	}
 }
 
@@ -385,6 +387,16 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 	}
 }
 
+void AFocusfireCharacter::HandleHealthChanged(const FOnAttributeChangeData& HealthAttribute)
+{
+	if (HealthAttribute.NewValue <= 0)
+	{
+		AActor* _Killer = HealthAttribute.GEModData->EffectSpec.GetEffectContext().GetInstigator();
+		float _KillerDamage = HealthAttribute.GEModData->EffectSpec.GetSetByCallerMagnitude(GameplayEffect_Damage_Tag);
+		OnDeath(_Killer, _KillerDamage); // Tell BP to play animations
+	}
+}
+
 FVector AFocusfireCharacter::GetPlayerPivotPosAroundLockedFocus(const AFocusBase* LockedFocus, const float IdealDistance)
 {
 	// Vector from Player to Player's first-person POV camera
@@ -402,12 +414,4 @@ FVector AFocusfireCharacter::GetPlayerPivotPosAroundLockedFocus(const AFocusBase
 void AFocusfireCharacter::SetGravityByMultiplier(const float NewGravityMultiplier)
 {
 	GetCharacterMovement()->GravityScale = DefaultGravityScale * NewGravityMultiplier;
-}
-
-void AFocusfireCharacter::HandleHealthChanged(float Magnitude, float NewHealth)
-{
-	if (NewHealth <= 0)
-	{
-		Destroy();
-	}
 }
