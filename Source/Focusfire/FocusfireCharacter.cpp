@@ -20,6 +20,7 @@
 #include "GameplayEffectExtension.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
+#include "Blueprint/UserWidget.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -108,6 +109,11 @@ void AFocusfireCharacter::BeginPlay()
 			c_AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet_HealthAttributeSet->GetHealthAttribute()).AddUObject(this, &AFocusfireCharacter::HandleHealthChanged);
 		}
 	}
+
+	if (FocusSelectorWidgetClass)
+	{
+		FocusSelectorWidget = CreateWidget<UUserWidget>(GetWorld(), FocusSelectorWidgetClass);
+	}
 }
 
 void AFocusfireCharacter::Tick(float DeltaSeconds)
@@ -159,6 +165,9 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Cancel a "locked-on" FocusBase during "GameplayAbility.Focus.Period"
 		EnhancedInputComponent->BindAction(CancelLockedFocusAction, ETriggerEvent::Started, this, &AFocusfireCharacter::CancelLockedFocus);
+
+		// Toggle the FocusBase selector radial menu
+		EnhancedInputComponent->BindAction(FocusSelectorAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::ToggleFocusSelector);
 	}
 	else
 	{
@@ -248,6 +257,38 @@ void AFocusfireCharacter::CancelLockedFocus(const FInputActionValue& Value)
 	// Unlock the "locked-on" FocusBase, to prevent pivoting around it anymore
 	CurrentLockedOnFocus = nullptr;
 	OnInputFocusPeriodCancelLocked(); // Will signal BP to "input cancel" the "GameplayAbility.Focus.Period", which will re-slowdown the Player
+}
+
+void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
+{
+	// If radial menu widget was never created, return
+	if (not IsValid(FocusSelectorWidget))
+		return;
+	
+	if (Value.Get<bool>()) // On Press
+	{
+		if (not FocusSelectorWidget->IsInViewport())
+		{
+			FocusSelectorWidget->AddToViewport();
+			GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameAndUI());
+
+			// Set mouse position to CENTER of the screen
+			int _viewX;
+			int _viewY;
+			GetWorld()->GetFirstPlayerController()->GetViewportSize(_viewX, _viewY);
+			GetWorld()->GetFirstPlayerController()->SetMouseLocation(_viewX / 2, _viewY / 2);
+			GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(true);
+		}
+	}
+	else // On Release
+	{
+		if (FocusSelectorWidget->IsInViewport())
+		{
+			FocusSelectorWidget->RemoveFromParent();
+			GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameOnly());
+			GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(false);
+		}
+	}
 }
 
 // END Input

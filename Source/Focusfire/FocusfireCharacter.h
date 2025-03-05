@@ -80,6 +80,10 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	/** Cancel "locked-on" FocusBase Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CancelLockedFocusAction;
+
+	/** Opens a radial menu to select a FocusBase Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* FocusSelectorAction;
 	
 public:
 	AFocusfireCharacter();
@@ -102,6 +106,9 @@ protected:
 
 	/** Called for cancelling "lock-on" FocusBase input */
 	void CancelLockedFocus(const FInputActionValue& Value);
+
+	/** Called for opening/closing FocusBase selection menu */
+	void ToggleFocusSelector(const FInputActionValue& Value);
 	
 	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -182,6 +189,17 @@ protected: /* FocusBase under crosshair */
 protected: /* Shooting FocusBase */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
 	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
+	TArray<TSubclassOf<AFocusBase>> EquippedFocuses;
+
+	/** The BP class of the radial menu that allows Player to select the current FocusBase to shoot */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	TSubclassOf<UUserWidget> FocusSelectorWidgetClass;
+
+	/** The radial menu that allows Player to select the current FocusBase to shoot */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	UUserWidget* FocusSelectorWidget;
 	
 protected: /* GameplayAbilitySystem */
 	/** AbilitySystemComponent **/
