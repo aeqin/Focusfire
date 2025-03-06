@@ -30,7 +30,7 @@ class FOCUSFIRE_API UUserWidget_FocusSelector : public UUserWidget
 
 	/** The angle size of each individual slice **/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
-	int SliceAngleSize;
+	float SliceAngleSize;
 
 	/** The possible FocusBase selection slices **/
 	UPROPERTY(BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
