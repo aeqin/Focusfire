@@ -20,6 +20,7 @@
 #include "GameplayEffectExtension.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
+#include "UserWidget_FocusSelector.h"
 #include "Blueprint/UserWidget.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -112,7 +113,13 @@ void AFocusfireCharacter::BeginPlay()
 
 	if (FocusSelectorWidgetClass)
 	{
-		FocusSelectorWidget = CreateWidget<UUserWidget>(GetWorld(), FocusSelectorWidgetClass);
+		FocusSelectorWidget = CreateWidget<UUserWidget_FocusSelector>(GetWorld(), FocusSelectorWidgetClass);
+
+		// Add all the types of FocusBase to the radial selector menu
+		for (TSubclassOf<AFocusBase> _focusType : EquippedFocuses)
+		{
+			FocusSelectorWidget->AddTypeOfFocus(_focusType);
+		}
 	}
 }
 
@@ -284,6 +291,13 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 	{
 		if (FocusSelectorWidget->IsInViewport())
 		{
+			// Set the current FocusBase to shoot, only if properly selected
+			TSubclassOf<AFocusBase> _selectedFocus = FocusSelectorWidget->GetSelectedFocus();
+			if (_selectedFocus != nullptr)
+			{
+				TypeOfFocusToShoot = _selectedFocus;
+			}
+			
 			FocusSelectorWidget->RemoveFromParent();
 			GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameOnly());
 			GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(false);

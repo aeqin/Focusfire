@@ -11,6 +11,7 @@
 #include "GameplayEffectTypes.h"
 #include "FocusfireCharacter.generated.h"
 
+class UUserWidget_FocusSelector;
 struct FGameplayAttribute;
 struct FGameplayAbilitySpecHandle;
 class UGameplayAbility;
@@ -199,7 +200,7 @@ protected: /* Shooting FocusBase */
 
 	/** The radial menu that allows Player to select the current FocusBase to shoot */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
-	UUserWidget* FocusSelectorWidget;
+	UUserWidget_FocusSelector* FocusSelectorWidget;
 	
 protected: /* GameplayAbilitySystem */
 	/** AbilitySystemComponent **/

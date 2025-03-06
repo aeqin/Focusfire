@@ -3,11 +3,14 @@
 
 #include "UserWidget_FocusSelector.h"
 
-float UUserWidget_FocusSelector::CalcCurrentAngle()
+bool UUserWidget_FocusSelector::CalcCurrentRadialAngle(float& radialAngle, float& radialDistance)
 {
 	// Get Mouse position vector
 	FVector _mousePos = FVector();
-	GetOwningPlayer()->GetMousePosition(_mousePos.X, _mousePos.Y);
+	if (not GetOwningPlayer()->GetMousePosition(_mousePos.X, _mousePos.Y))
+	{
+		return false;
+	}
 
 	// Get center of viewport position vector
 	int _viewX;
@@ -16,7 +19,21 @@ float UUserWidget_FocusSelector::CalcCurrentAngle()
 	FVector _viewportSize = FVector(_viewX, _viewY, 0.0f) / 2.0;
 
 	// Calculate look at rotation
-	FRotator _mouseRotation = (_viewportSize - _mousePos).Rotation();
+	FVector _offset = (_viewportSize - _mousePos);
+	FRotator _mouseRotation = _offset.Rotation();
 	
-	return 180 - _mouseRotation.Yaw;
+	radialAngle = 180 - _mouseRotation.Yaw; // Angle of mouse in respect to circle
+	radialDistance = _offset.Length(); // Distance of mouse from center of circle
+	
+	return true;
+}
+
+void UUserWidget_FocusSelector::AddTypeOfFocus(TSubclassOf<AFocusBase> FocusType)
+{
+	if (not FocusSelections.Contains(FocusType))
+	{
+		FocusSelections.Add(FocusType);
+		OnNewFocusSliceAdded(FocusType); // Signal BP to modify the dynamic material that draws the radial menu
+		UE_LOG(LogTemp, Display, TEXT("ccc Add TypeOfFocus"));
+	}
 }
