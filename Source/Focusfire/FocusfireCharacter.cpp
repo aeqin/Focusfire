@@ -175,6 +175,9 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Toggle the FocusBase selector radial menu
 		EnhancedInputComponent->BindAction(FocusSelectorAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::ToggleFocusSelector);
+
+		// Ping
+		EnhancedInputComponent->BindAction(PingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::DoPing);
 	}
 	else
 	{
@@ -302,6 +305,24 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 			GetWorld()->GetFirstPlayerController()->SetInputMode(FInputModeGameOnly());
 			GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(false);
 		}
+	}
+}
+
+void AFocusfireCharacter::DoPing(const FInputActionValue& Value)
+{
+	// Only Ping if in first person POV
+	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
+	{
+		return; // NOT in GameplayAbility.Focus.Period state, so do nothing
+	}
+
+	if (Value.Get<bool>()) // On Press
+	{
+		OnInputPing(); // Spawn prospective ping
+	}
+	else
+	{
+		//OnInputPing(); // Confirm ping
 	}
 }
 

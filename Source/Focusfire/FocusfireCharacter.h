@@ -86,6 +86,10 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* FocusSelectorAction;
 	
+	/** Ping Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* PingAction;
+	
 public:
 	AFocusfireCharacter();
 	virtual void BeginPlay() override;
@@ -110,6 +114,9 @@ protected:
 
 	/** Called for opening/closing FocusBase selection menu */
 	void ToggleFocusSelector(const FInputActionValue& Value);
+
+	/** Called for spawning a PingSphere */
+	void DoPing(const FInputActionValue& Value);
 	
 	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -234,6 +241,12 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnInputFocusPeriodCancelLocked();
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.Ping"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputPing();
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
