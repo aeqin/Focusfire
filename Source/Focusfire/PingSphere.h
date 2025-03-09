@@ -28,6 +28,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PingSphere", meta = (AllowPrivateAccess = "true"))
 	FCollisionProfileName CollisionProfile = FName("Focus");
 
+	/** What the materials of the ping should be attached to */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PingSphere", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMeshComponent> c_StaticMeshComponent;
 
@@ -58,7 +59,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	/*
+	/**
 	 * Set the PingSphere as "active", which allows it to be raycasted and gives it a lifetime
 	 */
 	UFUNCTION(BlueprintCallable, Category = "PingSphere")

@@ -178,6 +178,12 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Ping
 		EnhancedInputComponent->BindAction(PingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::DoPing);
+
+		// Cancel Ping
+		EnhancedInputComponent->BindAction(CancelPingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::CancelPing);
+		
+		// Ping distance adjustment
+		EnhancedInputComponent->BindAction(AdjustPingDistanceAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::AdjustPingDistance);
 	}
 	else
 	{
@@ -318,12 +324,27 @@ void AFocusfireCharacter::DoPing(const FInputActionValue& Value)
 
 	if (Value.Get<bool>()) // On Press
 	{
-		OnInputPing(); // Spawn prospective ping
+		OnInputPing(PingInput::PROSPECTIVE_PING); // Spawn prospective ping
 	}
-	else
+	else // On Release
 	{
-		//OnInputPing(); // Confirm ping
+		OnInputPing(PingInput::CONFIRM_PING); // Confirm ping
 	}
+}
+
+void AFocusfireCharacter::CancelPing(const FInputActionValue& Value)
+{
+	// Only Cancel prospective ping if during GameplayAbility.Ping
+	if (c_AbilitySystemComponent->HasMatchingGameplayTag(DuringPingTag))
+	{
+		OnInputPing(PingInput::CANCEL_PING);
+	}
+}
+
+void AFocusfireCharacter::AdjustPingDistance(const FInputActionValue& Value)
+{
+	float _adjustmentDirection = Value.Get<float>();
+	OnInputAdjustPingDistance(_adjustmentDirection);
 }
 
 // END Input

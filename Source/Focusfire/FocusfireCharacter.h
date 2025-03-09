@@ -29,6 +29,14 @@ struct FInputActionValue;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFocusInRangeChanged, AFocusBase*, FocusInRange);
 
+UENUM(BlueprintType)
+enum PingInput
+{
+	PROSPECTIVE_PING,
+	CONFIRM_PING,
+	CANCEL_PING,
+};
+
 UCLASS(config=Game)
 class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 {
@@ -89,6 +97,14 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	/** Ping Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* PingAction;
+
+	/** Cancel Ping Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* CancelPingAction;
+	
+	/** Adjust Ping Distance Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AdjustPingDistanceAction;
 	
 public:
 	AFocusfireCharacter();
@@ -117,6 +133,12 @@ protected:
 
 	/** Called for spawning a PingSphere */
 	void DoPing(const FInputActionValue& Value);
+
+	/** Called for cancelling a PingSphere */
+	void CancelPing(const FInputActionValue& Value);
+
+	/** Called for adjusting the spawned PingSphere distance */
+	void AdjustPingDistance(const FInputActionValue& Value);
 	
 	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -218,6 +240,10 @@ protected: /* GameplayAbilitySystem */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	FGameplayTag DuringFocusPeriodTag;
 
+	/** The GameplayTag that denotes if the Player is currently in the "GameplayAbility.Ping" state */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag DuringPingTag;
+	
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Dash"
 	*/
@@ -244,9 +270,16 @@ protected: /* GameplayAbilitySystem */
 
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Ping"
+	* @param PingInputEnum: Type of input for ping. Place prospective ping, confirm prospective ping, cancel prospective ping
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
-	void OnInputPing();
+	void OnInputPing(PingInput PingInputEnum);
+
+	/** 
+	* Event that is fired when BP should try to signal "GameplayAbility.Ping" to adjust PingSphere position
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputAdjustPingDistance(float AdjustmentDirection);
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent

@@ -8,7 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-void UGameplayAbility_Ping::PingStart()
+void UGameplayAbility_Ping::SpawnProspectivePing()
 {
 	AActor* _activator = CurrentActorInfo->AvatarActor.Get();
 	if (not _activator) return;
@@ -19,13 +19,14 @@ void UGameplayAbility_Ping::PingStart()
 	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(_activator))
 	{
 		// Need to trace from camera in case of FocusfireCharacter
-		_TraceStart = _player->GetCurrentCamera()->GetComponentLocation();
-		_TraceEnd = _TraceStart + _player->GetCurrentCamera()->GetForwardVector() * PingMaxRange;
+		FollowCamera = _player->GetCurrentCamera();
+		_TraceStart = FollowCamera->GetComponentLocation();
+		_TraceEnd = _TraceStart + FollowCamera->GetForwardVector() * MaximumPingDistance;
 	}
 	else
 	{
 		_TraceStart = _activator->GetActorLocation();
-		_TraceEnd = _TraceStart + _activator->GetActorForwardVector() * PingMaxRange;
+		_TraceEnd = _TraceStart + _activator->GetActorForwardVector() * MaximumPingDistance;
 	}
 	
 	// Raycast
@@ -56,7 +57,7 @@ void UGameplayAbility_Ping::PingStart()
 	else
 	{
 		// Set current distance of Ping as max distance
-		PingCurrentRange = PingMaxRange;
+		PingCurrentRange = MaximumPingDistance;
 		_spawnPingTransform.SetLocation(_TraceEnd);
 	}
 
@@ -68,5 +69,60 @@ void UGameplayAbility_Ping::PingStart()
 		{
 			SpawnedPingSphere->FinishSpawning(_spawnPingTransform);
 		}
+	}
+
+	// If activator has a camera, aim the PingSphere relative to the camera
+	if (FollowCamera)
+	{
+		SpawnedPingSphere->AttachToComponent(FollowCamera, FAttachmentTransformRules::KeepWorldTransform);
+	}
+}
+
+void UGameplayAbility_Ping::OnInputMovePingFurther()
+{
+	if (not IsValid(FollowCamera)) return;
+
+	// Don't move further than max distance
+	FVector _CamLocation = FollowCamera->GetComponentLocation();
+	FVector _CurrPingLocation = SpawnedPingSphere->GetActorLocation();
+	FVector _PingFurtherDirection = (_CurrPingLocation - _CamLocation).GetSafeNormal();
+	if ((_CurrPingLocation - _CamLocation).Length() > MaximumPingDistance - OnInputPingMoveDist)
+	{
+		SpawnedPingSphere->SetActorLocation(_CamLocation + _PingFurtherDirection * MaximumPingDistance); // Set at max distance
+	}
+	else
+	{
+		SpawnedPingSphere->SetActorLocation(_CurrPingLocation + _PingFurtherDirection * OnInputPingMoveDist); // Move further
+	}
+}
+
+void UGameplayAbility_Ping::OnInputMovePingCloser()
+{
+	if (not IsValid(FollowCamera)) return;
+
+	// Don't move closer than min distance
+	FVector _CamLocation = FollowCamera->GetComponentLocation();
+	FVector _CurrPingLocation = SpawnedPingSphere->GetActorLocation();
+	FVector _PingFurtherDirection = (_CurrPingLocation - _CamLocation).GetSafeNormal();
+	if ((_CurrPingLocation - _CamLocation).Length() < MinimumPingDistance + OnInputPingMoveDist)
+	{
+		SpawnedPingSphere->SetActorLocation(_CamLocation + _PingFurtherDirection * MinimumPingDistance); // Set at min distance
+	}
+	else
+	{
+		SpawnedPingSphere->SetActorLocation(_CurrPingLocation - _PingFurtherDirection * OnInputPingMoveDist); // Move closer
+	}
+}
+
+void UGameplayAbility_Ping::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+	// If there remains a valid SpawnedPingSphere, then detach from FollowCamera (Confirming the prospective PingSphere to its current location)
+	if (not bWasCancelled && IsValid(SpawnedPingSphere))
+	{
+		SpawnedPingSphere->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	}
 }
