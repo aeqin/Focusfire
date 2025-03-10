@@ -10,6 +10,8 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "UserWidget_FocusMarker.h"
+#include "Components/WidgetComponent.h"
 
 // Sets default values
 AFocusBase::AFocusBase()
@@ -20,6 +22,7 @@ AFocusBase::AFocusBase()
 	// Create sphere collider
 	c_SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 	SetRootComponent(c_SphereComponent);
+	c_SphereComponent->SetSphereRadius(34.0f);
 	c_SphereComponent->SetCollisionProfileName(CollisionProfile.Name, true);
 	c_SphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly); // Raycast-able, but won't physically block player
 	c_SphereComponent->SetHiddenInGame(false); // See (in-game) debug collision sphere
@@ -33,6 +36,12 @@ AFocusBase::AFocusBase()
 	
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+
+	// Create widget component
+	FocusMarkerWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("FocusMarkerComponent"));
+	FocusMarkerWidgetComponent->SetRelativeLocation(FVector(0, 0, c_SphereComponent->GetScaledSphereRadius() + 30.0f));
+	FocusMarkerWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	FocusMarkerWidgetComponent->AttachToComponent(c_SphereComponent, FAttachmentTransformRules::KeepRelativeTransform);
 }
 
 // Called when the game starts or when spawned
@@ -56,6 +65,13 @@ void AFocusBase::BeginPlay()
 	if (NiagaraSystem_RepresentingVFX)
 	{
 		c_NiagaraComponent_RepresentingVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(NiagaraSystem_RepresentingVFX, c_SphereComponent, NAME_None, FVector(0.0f), FRotator(0.f), EAttachLocation::Type::SnapToTargetIncludingScale, true);
+	}
+
+	// Set actor location in the widget display distance from player
+	if (UUserWidget_FocusMarker* _FocusMarkerWidget = Cast<UUserWidget_FocusMarker>(FocusMarkerWidgetComponent->GetUserWidgetObject()))
+	{
+		FocusMarkerWidget = _FocusMarkerWidget; // Store ref
+		FocusMarkerWidget->ActorToTrack = this;
 	}
 }
 

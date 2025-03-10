@@ -6,6 +6,8 @@
 #include "GameFramework/Actor.h"
 #include "PingSphere.generated.h"
 
+class UWidgetComponent;
+class UUserWidget_FocusMarker;
 class USphereComponent;
 
 UCLASS()
@@ -39,6 +41,14 @@ protected:
 	/** What the ping should look once active */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PingSphere", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMaterialInterface> mat_ActivePing;
+
+	/** The FocusMarkerWidget ref that displays distance from PingSphere to player */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PingSphere")
+	UUserWidget_FocusMarker* FocusMarkerWidget;
+
+	/** The widget component that holds the BP class of the FocusMarker widget */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PingSphere")
+	UWidgetComponent* FocusMarkerWidgetComponent;
 	
 	/** Max Lifetime, how many seconds the FocusBase will last before being automatically destroyed */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PingSphere", meta = (AllowPrivateAccess = "true"))

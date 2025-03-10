@@ -8,6 +8,8 @@
 #include "GameplayTagContainer.h"
 #include "FocusBase.generated.h"
 
+class UWidgetComponent;
+class UUserWidget_FocusMarker;
 class UProjectileMovementComponent;
 class USphereComponent;
 class UNiagaraComponent;
@@ -52,7 +54,15 @@ protected:
 	/** Shoot speed, the speed at which the FocusBase is shot out at */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float ShootSpeed = 1000.0f;
+	
+	/** The FocusMarkerWidget ref that displays distance from FocusBase to player */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FocusBase")
+	UUserWidget_FocusMarker* FocusMarkerWidget;
 
+	/** The widget component that holds the BP class of the FocusMarker widget */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FocusBase")
+	UWidgetComponent* FocusMarkerWidgetComponent;
+	
 	/** Max Lifetime, how many seconds the FocusBase will last before being automatically destroyed */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float LifeInSecondsMax = 10.0f;
