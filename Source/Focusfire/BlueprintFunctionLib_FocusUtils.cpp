@@ -23,8 +23,19 @@ bool UBlueprintFunctionLib_FocusUtils::IsWidgetComponentOnPlayerScreen(const APl
 	return true; // On screen
 }
 
+float UBlueprintFunctionLib_FocusUtils::GetPlayerToActorAngle(const APlayerController* ControllerRef,
+	const AActor* ActorRef)
+{
+	FVector _PlayerLocation = ControllerRef->GetPawn()->GetActorLocation();
+	FVector _ActorLocation = ActorRef->GetActorLocation();
+	FRotator _LookAtRotator = (_PlayerLocation - _ActorLocation).Rotation();
+	float _AngleFromPlayerViewToActor = _LookAtRotator.Yaw - ControllerRef->GetControlRotation().Yaw;
+	
+	return _AngleFromPlayerViewToActor;
+}
+
 float UBlueprintFunctionLib_FocusUtils::GetPlayerToWidgetComponentAngle(const APlayerController* ControllerRef,
-	const UWidgetComponent* WidgetComponent)
+                                                                        const UWidgetComponent* WidgetComponent)
 {
 	FVector _PlayerLocation = ControllerRef->GetPawn()->GetActorLocation();
 	FVector _WidgetLocation = WidgetComponent->GetComponentLocation();

@@ -15,6 +15,7 @@ class FOCUSFIRE_API UBlueprintFunctionLib_FocusUtils : public UBlueprintFunction
 {
 	GENERATED_BODY()
 
+public:
 	/**
 	 * @param ControllerRef: The reference to the controller (used to get viewport)
 	 * @param WidgetComponent: The reference to the WidgetComponent (that has a world space)
@@ -23,6 +24,14 @@ class FOCUSFIRE_API UBlueprintFunctionLib_FocusUtils : public UBlueprintFunction
 	UFUNCTION(BlueprintPure, Category = "FocusUtils")
 	static bool IsWidgetComponentOnPlayerScreen(const APlayerController* ControllerRef, const UWidgetComponent* WidgetComponent);
 
+	/**
+	 * @param ControllerRef: The reference to the controller (used to get viewport)
+	 * @param ActorRef: The reference to the AActor (that has a world space)
+	 * @returns: The angle (Yaw) from the Player to the AActor in world space
+	 */
+	UFUNCTION(BlueprintPure, Category = "FocusUtils")
+	static float GetPlayerToActorAngle(const APlayerController* ControllerRef, const AActor* ActorRef);
+	
 	/**
 	 * @param ControllerRef: The reference to the controller (used to get viewport)
 	 * @param WidgetComponent: The reference to the WidgetComponent (that has a world space)

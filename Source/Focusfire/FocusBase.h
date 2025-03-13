@@ -104,6 +104,8 @@ protected:
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return FocusMarkerWidgetComponent; }
 	
 	/** GameplayAbilitySystem **/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
