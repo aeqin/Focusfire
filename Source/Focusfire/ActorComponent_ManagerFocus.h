@@ -7,6 +7,7 @@
 #include "ActorComponent_ManagerFocus.generated.h"
 
 
+class UWidgetComponent;
 class UUserWidget_FocusMarker;
 class AFocusBase;
 
@@ -28,6 +29,15 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 	 */
 	UFUNCTION()
 	void OnTickPositionOffscreenIndicators();
+
+	/**
+	 * Helper function for OnTickPositionOffscreenIndicators(), each frame, position a widget that points towards each FocusBase off the screen of the Player
+	 * @param PlayerController: Reference to current Player
+	 * @param WidgetComponent: Reference to the WidgetComponent (that has a world position) that contains the widget
+	 * @param MarkerWidget: Reference to the widget of the FocusBase
+	 */
+	UFUNCTION()
+	static void PositionOffscreenIndicators(const APlayerController* PlayerController, const UWidgetComponent* WidgetComponent, UUserWidget_FocusMarker* MarkerWidget);
 	
 	/** Function that is fired when a FocusBase is destroyed */
 	UFUNCTION()

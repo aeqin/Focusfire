@@ -30,7 +30,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFocusInRangeChanged, AFocusBase*, FocusInRange);
 
 UENUM(BlueprintType)
-enum PingInput
+enum class EPingInput : uint8
 {
 	PROSPECTIVE_PING,
 	CONFIRM_PING,
@@ -273,7 +273,7 @@ protected: /* GameplayAbilitySystem */
 	* @param PingInputEnum: Type of input for ping. Place prospective ping, confirm prospective ping, cancel prospective ping
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
-	void OnInputPing(PingInput PingInputEnum);
+	void OnInputPing(EPingInput PingInputEnum);
 
 	/** 
 	* Event that is fired when BP should try to signal "GameplayAbility.Ping" to adjust PingSphere position

@@ -324,11 +324,11 @@ void AFocusfireCharacter::DoPing(const FInputActionValue& Value)
 
 	if (Value.Get<bool>()) // On Press
 	{
-		OnInputPing(PingInput::PROSPECTIVE_PING); // Spawn prospective ping
+		OnInputPing(EPingInput::PROSPECTIVE_PING); // Spawn prospective ping
 	}
 	else // On Release
 	{
-		OnInputPing(PingInput::CONFIRM_PING); // Confirm ping
+		OnInputPing(EPingInput::CONFIRM_PING); // Confirm ping
 	}
 }
 
@@ -337,7 +337,7 @@ void AFocusfireCharacter::CancelPing(const FInputActionValue& Value)
 	// Only Cancel prospective ping if during GameplayAbility.Ping
 	if (c_AbilitySystemComponent->HasMatchingGameplayTag(DuringPingTag))
 	{
-		OnInputPing(PingInput::CANCEL_PING);
+		OnInputPing(EPingInput::CANCEL_PING);
 	}
 }
 

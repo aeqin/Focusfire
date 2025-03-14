@@ -17,17 +17,25 @@ class FOCUSFIRE_API UBlueprintFunctionLib_FocusUtils : public UBlueprintFunction
 
 public:
 	/**
-	 * @param ControllerRef: The reference to the controller (used to get viewport)
-	 * @param WidgetComponent: The reference to the WidgetComponent (that has a world space)
-	 * @returns: Whether the WidgetComponent is on the particular Player's screen
+	 * @param ControllerRef: The reference to the Player controller (used to get viewport)
+	 * @param WorldLocation: The world space to check if on Player screen
+	 * @returns: Whether the location is on the particular Player's screen
 	 */
 	UFUNCTION(BlueprintPure, Category = "FocusUtils")
-	static bool IsWidgetComponentOnPlayerScreen(const APlayerController* ControllerRef, const UWidgetComponent* WidgetComponent);
+	static bool IsLocationOnPlayerScreen(const APlayerController* ControllerRef, const FVector WorldLocation);
 
 	/**
 	 * @param ControllerRef: The reference to the controller (used to get viewport)
+	 * @param Location: The world space location
+	 * @returns: The screen space angle from the Player to the location in world space (relative to a vector pointing straight up: FVector2D(0, -1))
+	 */
+	UFUNCTION(BlueprintPure, Category = "FocusUtils")
+	static float GetPlayerToLocationViewportAngle(const APlayerController* ControllerRef, const FVector& Location);
+	
+	/**
+	 * @param ControllerRef: The reference to the controller (used to get viewport)
 	 * @param ActorRef: The reference to the AActor (that has a world space)
-	 * @returns: The angle (Yaw) from the Player to the AActor in world space
+	 * @returns: The screen space angle from the Player to the AActor in world space
 	 */
 	UFUNCTION(BlueprintPure, Category = "FocusUtils")
 	static float GetPlayerToActorAngle(const APlayerController* ControllerRef, const AActor* ActorRef);
@@ -35,7 +43,7 @@ public:
 	/**
 	 * @param ControllerRef: The reference to the controller (used to get viewport)
 	 * @param WidgetComponent: The reference to the WidgetComponent (that has a world space)
-	 * @returns: The angle (Yaw) from the Player to the WidgetComponent in world space
+	 * @returns: The screen space angle from the Player to the WidgetComponent in world space
 	 */
 	UFUNCTION(BlueprintPure, Category = "FocusUtils")
 	static float GetPlayerToWidgetComponentAngle(const APlayerController* ControllerRef, const UWidgetComponent* WidgetComponent);

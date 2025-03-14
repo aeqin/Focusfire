@@ -3,15 +3,18 @@
 
 #include "BlueprintFunctionLib_FocusUtils.h"
 
+#include "FocusfireCharacter.h"
+#include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 
-bool UBlueprintFunctionLib_FocusUtils::IsWidgetComponentOnPlayerScreen(const APlayerController* ControllerRef, const UWidgetComponent* WidgetComponent)
+bool UBlueprintFunctionLib_FocusUtils::IsLocationOnPlayerScreen(const APlayerController* ControllerRef, const FVector WorldLocation)
 {
 	FVector2D _ScreenLocation;
 	int _ViewportSizeX;
 	int _ViewportSizeY;
 	
-	if (not ControllerRef->ProjectWorldLocationToScreen(WidgetComponent->GetComponentLocation(), _ScreenLocation))
+	if (not ControllerRef->ProjectWorldLocationToScreen(WorldLocation, _ScreenLocation))
 		return false; // Failed to project to screen
 	
 	ControllerRef->GetViewportSize(_ViewportSizeX, _ViewportSizeY);
@@ -23,26 +26,50 @@ bool UBlueprintFunctionLib_FocusUtils::IsWidgetComponentOnPlayerScreen(const APl
 	return true; // On screen
 }
 
-float UBlueprintFunctionLib_FocusUtils::GetPlayerToActorAngle(const APlayerController* ControllerRef,
-	const AActor* ActorRef)
+float UBlueprintFunctionLib_FocusUtils::GetPlayerToLocationViewportAngle(const APlayerController* ControllerRef,
+	const FVector& Location)
 {
-	FVector _PlayerLocation = ControllerRef->GetPawn()->GetActorLocation();
-	FVector _ActorLocation = ActorRef->GetActorLocation();
-	FRotator _LookAtRotator = (_PlayerLocation - _ActorLocation).Rotation();
-	float _AngleFromPlayerViewToActor = _LookAtRotator.Yaw - ControllerRef->GetControlRotation().Yaw;
-	
-	return _AngleFromPlayerViewToActor;
+	const FVector CameraLocation = ControllerRef->PlayerCameraManager->GetCameraLocation();
+	const FRotator CameraRotation = ControllerRef->PlayerCameraManager->GetCameraRotation();
+
+	const FVector CameraForwardVector = UKismetMathLibrary::GetForwardVector(CameraRotation);
+	const FVector CameraRightVector = UKismetMathLibrary::GetRightVector(CameraRotation);
+	const FVector CameraUpVector = UKismetMathLibrary::GetUpVector(CameraRotation);
+
+	const FVector ProjectedVector = UKismetMathLibrary::ProjectVectorOnToPlane(Location - CameraLocation, CameraForwardVector).GetSafeNormal();
+
+	// Calculate angle
+	const float Dot = FVector::DotProduct(ProjectedVector, CameraRightVector);
+	float Angle;
+	if (FVector::DotProduct(ProjectedVector, CameraUpVector) > 0.0f) // Top half of screen
+	{
+		Angle = -1 * UKismetMathLibrary::DegAcos(Dot); // Need to flip sign, otherwise top half points down (same as bottom half)
+	}
+	else // Bottom half of screen
+	{
+		Angle = UKismetMathLibrary::DegAcos(Dot);
+	}
+	return Angle + 90; // Add 90 so that Angle is in relation to a vector pointing straight up FVector2D(0, -1)
+}
+
+float UBlueprintFunctionLib_FocusUtils::GetPlayerToActorAngle(const APlayerController* ControllerRef,
+                                                              const AActor* ActorRef)
+{
+	return GetPlayerToLocationViewportAngle(ControllerRef, ActorRef->GetActorLocation());
 }
 
 float UBlueprintFunctionLib_FocusUtils::GetPlayerToWidgetComponentAngle(const APlayerController* ControllerRef,
                                                                         const UWidgetComponent* WidgetComponent)
 {
-	FVector _PlayerLocation = ControllerRef->GetPawn()->GetActorLocation();
-	FVector _WidgetLocation = WidgetComponent->GetComponentLocation();
-	FRotator _LookAtRotator = (_PlayerLocation - _WidgetLocation).Rotation();
-	float _AngleFromPlayerViewToWidgetComponent = _LookAtRotator.Yaw - ControllerRef->GetControlRotation().Yaw;
-	
-	return _AngleFromPlayerViewToWidgetComponent;
+	return GetPlayerToLocationViewportAngle(ControllerRef, WidgetComponent->GetComponentLocation());
+
+	// Old implementation
+	// FVector _PlayerLocation = ControllerRef->GetPawn()->GetActorLocation();
+	// FVector _WidgetLocation = WidgetComponent->GetComponentLocation();
+	// FRotator _LookAtRotator = (_PlayerLocation - _WidgetLocation).Rotation();
+	// float _AngleFromPlayerViewToWidgetComponent = _LookAtRotator.Yaw - ControllerRef->GetControlRotation().Yaw;
+	//
+	// return _AngleFromPlayerViewToWidgetComponent;
 }
 
 FVector2D UBlueprintFunctionLib_FocusUtils::GetViewportBoundsIntersectionFromAngle(const FVector2D ViewportBounds,
@@ -54,7 +81,8 @@ FVector2D UBlueprintFunctionLib_FocusUtils::GetViewportBoundsIntersectionFromAng
 	// Max line length would be the distance from center of rectangle to corner
 	float _MaxLineLength = (FVector2D(_CenterPoint.X, 0) - FVector2D(0, _CenterPoint.Y)).Length();
 
-	// Calculate the line angle from the GetPlayerToWidgetComponentAngle() angle
+	// Old implementation
+	/* Calculate the line angle from the GetPlayerToWidgetComponentAngle() angle
 	float _LineAngle;
 	if (Angle <= 0)
 	{
@@ -63,10 +91,10 @@ FVector2D UBlueprintFunctionLib_FocusUtils::GetViewportBoundsIntersectionFromAng
 	else
 	{
 		_LineAngle = Angle + 180;
-	}
+	}*/
 
 	// Calculate end point of line from angle (using unit vector pointing up)
-	FVector2D _LineEndPoint = _CenterPoint + FVector2D(0, -1).GetRotated(_LineAngle) * _MaxLineLength;
+	FVector2D _LineEndPoint = _CenterPoint + FVector2D(0, -1).GetRotated(Angle) * _MaxLineLength;
 
 	// Calculate intersection of line with rectangle bounds
 	FVector2D _IntersectionPoint;

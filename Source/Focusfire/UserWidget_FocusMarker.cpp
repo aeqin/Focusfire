@@ -16,3 +16,9 @@ int UUserWidget_FocusMarker::GetRoundedMDistanceToPlayer()
 		return -1;
 	}
 }
+
+void UUserWidget_FocusMarker::SetFocusMarkerMode(const EFocusMarkerMode NewMarkerMode)
+{
+	FocusMarkerMode = NewMarkerMode;
+	OnFocusMarkerModeChanged(); // Tell BP to change image
+}
