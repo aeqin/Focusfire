@@ -5,6 +5,7 @@
 
 #include "BlueprintFunctionLib_FocusUtils.h"
 #include "FocusBase.h"
+#include "PingSphere.h"
 #include "UserWidget_FocusMarker.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CanvasPanelSlot.h"
@@ -53,6 +54,46 @@ void UActorComponent_ManagerFocus::OnTickPositionOffscreenIndicators()
 			}
 		}
 	}
+
+	// Iterate through all PingSphere in game
+	for (TPair<APingSphere*, UUserWidget_FocusMarker*>& Ping_Widget : Map_Ping_Widget)
+	{
+		APingSphere* _Ping = Ping_Widget.Key;
+		UUserWidget_FocusMarker* _Widget = Ping_Widget.Value;
+
+		// PingSphere's WidgetComponent is VISIBLE on the Player's viewport
+		if (UBlueprintFunctionLib_FocusUtils::IsLocationOnPlayerScreen(_Player, _Ping->GetActorLocation()))
+		{
+			if (IsValid(_Widget))
+			{
+				_Widget->RemoveFromParent(); // Remove the offscreen indicator widget
+			}
+		}
+
+		// PingSphere's WidgetComponent is OFF the Player's viewport
+		else
+		{
+			// If no widget exists for this PingSphere
+			if (not IsValid(_Widget))
+			{
+				// Create a widget (for offscreen indicator)
+				Ping_Widget.Value = CreateWidget<UUserWidget_FocusMarker>(GetWorld(), FocusMarkerWidgetClass);
+				Ping_Widget.Value->ActorToTrack = _Ping;
+				Ping_Widget.Value->SetFocusMarkerMode(EFocusMarkerMode::OFF_SCREEN); // Set mode so that image is offscreen indicator
+			}
+			// Widget already exists
+			else
+			{
+				if (not _Widget->IsInViewport())
+				{
+					_Widget->AddToViewport(); // Add the offscreen indicator
+				}
+
+				// Reposition & rotate the offscreen indicator
+				PositionOffscreenIndicators(_Player, _Ping->GetWidgetComponent(), _Widget);
+			}
+		}
+	}
 }
 
 void UActorComponent_ManagerFocus::PositionOffscreenIndicators(const APlayerController* PlayerController, const UWidgetComponent* WidgetComponent, UUserWidget_FocusMarker* MarkerWidget)
@@ -85,7 +126,18 @@ void UActorComponent_ManagerFocus::OnFocusDestroyed(AActor* DestroyedActor)
 		}
 		Map_Focus_Widget.Remove(_focus); // Remove FocusBase from ref
 	}
+}
 
+void UActorComponent_ManagerFocus::OnPingDestroyed(AActor* DestroyedActor)
+{
+	if (APingSphere* _ping = Cast<APingSphere>(DestroyedActor))
+	{
+		if (UUserWidget_FocusMarker* _widget = Map_Ping_Widget[_ping])
+		{
+			Map_Ping_Widget[_ping]->RemoveFromParent(); // Remove widget (if it exists)
+		}
+		Map_Ping_Widget.Remove(_ping); // Remove PingSphere from ref
+	}
 }
 
 // Sets default values for this component's properties
@@ -116,7 +168,7 @@ void UActorComponent_ManagerFocus::TickComponent(float DeltaTime, ELevelTick Tic
 	OnTickPositionOffscreenIndicators();
 }
 
-void UActorComponent_ManagerFocus::ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection,
+AFocusBase* UActorComponent_ManagerFocus::ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection,
 	TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner)
 {
 	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
@@ -128,5 +180,45 @@ void UActorComponent_ManagerFocus::ShootFocusInDirection(FTransform SpawnTransfo
 		
 		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref if this new FocusBase to map
 		_spawnedFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnFocusDestroyed); // When destroyed, remove ref from map
+	}
+	return _spawnedFocus;
+}
+
+APingSphere* UActorComponent_ManagerFocus::SpawnPing(FTransform SpawnTransform, TSubclassOf<class APingSphere> PingClassToSpawn,
+	AActor* Spawner)
+{
+	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
+	APingSphere* _spawnedPing = GetWorld()->SpawnActorDeferred<APingSphere>(PingClassToSpawn, SpawnTransform, Spawner->GetOwner(), Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (IsValid(_spawnedPing))
+	{
+		_spawnedPing->FinishSpawning(SpawnTransform);
+		
+		Map_Ping_Widget.Add(_spawnedPing, nullptr); // Store ref if this new PingSphere to map
+		_spawnedPing->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnPingDestroyed); // When destroyed, remove ref from map
+	}
+	return _spawnedPing;
+}
+
+FLinearColor UActorComponent_ManagerFocus::GetFocusColor(TSubclassOf<AFocusBase> FocusType)
+{
+	if (Map_Focusclass_Color.Contains(FocusType))
+	{
+		return Map_Focusclass_Color[FocusType];
+	}
+	else
+	{
+		return FLinearColor::White;
+	}
+}
+
+FString UActorComponent_ManagerFocus::GetFocusString(TSubclassOf<AFocusBase> FocusType)
+{
+	if (Map_Focusclass_String.Contains(FocusType))
+	{
+		return Map_Focusclass_String[FocusType];
+	}
+	else
+	{
+		return FString::Printf(TEXT("Error: There is no String name mapped to this FocusBase class [%s]"), *FocusType->GetName());
 	}
 }

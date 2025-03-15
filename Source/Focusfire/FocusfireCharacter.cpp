@@ -12,8 +12,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "AbilitySystemComponent.h"
+#include "ActorComponent_ManagerFocus.h"
 #include "AttributeSetHealth.h"
 #include "FocusBase.h"
+#include "FocusfireGameState.h"
 #include "GameplayAbility_FocusDash.h"
 #include "GameplayAbility_FocusPeriod.h"
 #include "GameplayAbility_FocusShoot.h"
@@ -21,6 +23,7 @@
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
 #include "UserWidget_FocusSelector.h"
+#include "UserWidget_PlayerHUD.h"
 #include "Blueprint/UserWidget.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -97,7 +100,8 @@ void AFocusfireCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	FirstPersonPOVCameraOffset = GetActorLocation() - GetFirstPOVCamera()->GetComponentLocation();
-	
+
+	// Set up Ability System Component
 	if (c_AbilitySystemComponent)
 	{
 		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
@@ -111,6 +115,7 @@ void AFocusfireCharacter::BeginPlay()
 		}
 	}
 
+	// Set up Focus Selector (radial menu)
 	if (FocusSelectorWidgetClass)
 	{
 		FocusSelectorWidget = CreateWidget<UUserWidget_FocusSelector>(GetWorld(), FocusSelectorWidgetClass);
@@ -120,6 +125,17 @@ void AFocusfireCharacter::BeginPlay()
 		{
 			FocusSelectorWidget->AddTypeOfFocus(_focusType);
 		}
+	}
+
+	// Set up Player HUD
+	if (PlayerHUDClass)
+	{
+		PlayerHUDWidget = CreateWidget<UUserWidget_PlayerHUD>(GetWorld(), PlayerHUDClass);
+		PlayerHUDWidget->AddToViewport();
+
+		// Set starting FocusBase to shoot
+		const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
+		PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
 	}
 }
 
@@ -305,6 +321,13 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 			if (_selectedFocus != nullptr)
 			{
 				TypeOfFocusToShoot = _selectedFocus;
+
+				// Reflect the currently selected FocusBase type on HUD
+				if (IsValid(PlayerHUDWidget))
+				{
+					const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
+					PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
+				}
 			}
 			
 			FocusSelectorWidget->RemoveFromParent();

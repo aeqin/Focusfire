@@ -69,6 +69,9 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	/** @return The WidgetComponent that displays distance to Player */
+	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return FocusMarkerWidgetComponent; }
+	
 	/**
 	 * Set the PingSphere as "active", which allows it to be raycasted and gives it a lifetime
 	 */

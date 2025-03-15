@@ -7,6 +7,7 @@
 #include "ActorComponent_ManagerFocus.generated.h"
 
 
+class APingSphere;
 class UWidgetComponent;
 class UUserWidget_FocusMarker;
 class AFocusBase;
@@ -19,6 +20,10 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 	/** A map of FocusBase to UUserWidget_FocusMarker currently active in the game */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
 	TMap<AFocusBase*, UUserWidget_FocusMarker*> Map_Focus_Widget;
+
+	/** A map of PingSphere to UUserWidget_FocusMarker currently active in the game */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TMap<APingSphere*, UUserWidget_FocusMarker*> Map_Ping_Widget;
 
 	/** The class of widget to spawn (as offscreen indicator) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
@@ -42,6 +47,18 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 	/** Function that is fired when a FocusBase is destroyed */
 	UFUNCTION()
 	void OnFocusDestroyed(AActor* DestroyedActor);
+
+	/** Function that is fired when a PingSphere is destroyed */
+	UFUNCTION()
+	void OnPingDestroyed(AActor* DestroyedActor);
+
+	/** A map of FocusBaseType Class to Color that best represents it */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TMap<TSubclassOf<AFocusBase>, FLinearColor> Map_Focusclass_Color;
+
+	/** A map of FocusBaseType Class to String that best represents its name */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TMap<TSubclassOf<AFocusBase>, FString> Map_Focusclass_String;
 	
 public:	
 	// Sets default values for this component's properties
@@ -63,7 +80,28 @@ public:
 	 * @param Spawner: The AActor that spawned this FocusBase
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
-	void ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
+	AFocusBase* ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
 
-		
+	/**
+	 * Spawn a PingSphere at the specified location
+	 * @param SpawnTransform: The location in world space to spawn the PingSphere
+	 * @param PingClassToSpawn: The type of PingSphere to spawn
+	 * @param Spawner: The AActor that spawned this PingSphere
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
+	APingSphere* SpawnPing(FTransform SpawnTransform, TSubclassOf<class APingSphere> PingClassToSpawn, AActor* Spawner);
+	
+	/**
+	 * Get the color that best represents the Focus
+	 * @param FocusType: The class type of the focus to check
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
+	FLinearColor GetFocusColor(TSubclassOf<AFocusBase> FocusType);
+
+	/**
+	 * Get the String that best represents the Focus
+	 * @param FocusType: The class type of the focus to check
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
+	FString GetFocusString(TSubclassOf<AFocusBase> FocusType);
 };

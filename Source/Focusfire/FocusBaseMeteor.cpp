@@ -17,4 +17,7 @@ void AFocusBaseMeteor::ActivateAbility(const AActor* Activator)
 		FGameplayAbilitySpec MeteorSpec(GameplayAbility_FocusMeteor, 1, 0, this);
 		_player->GetAbilitySystemComponent()->GiveAbilityAndActivateOnce(MeteorSpec);
 	}
+
+	// Destroy once ability is used
+	Destroy();
 }

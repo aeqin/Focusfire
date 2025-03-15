@@ -11,6 +11,7 @@
 #include "GameplayEffectTypes.h"
 #include "FocusfireCharacter.generated.h"
 
+class UUserWidget_PlayerHUD;
 class UUserWidget_FocusSelector;
 struct FGameplayAttribute;
 struct FGameplayAbilitySpecHandle;
@@ -215,11 +216,22 @@ protected: /* FocusBase under crosshair */
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void PivotAroundLockedFocus();
+
+protected: /* Player HUD */
+	/** Type of PlayerHUD to spawn */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	TSubclassOf<UUserWidget> PlayerHUDClass;
+
+	/** Widget of Player's HUD (spawned & set in BeginPlay()) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	UUserWidget_PlayerHUD* PlayerHUDWidget;
 	
 protected: /* Shooting FocusBase */
+	/** Currently selected FocusBase that will be shot */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
 	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
 
+	/** List of all possible FocusBase equipped to Player */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
 	TArray<TSubclassOf<AFocusBase>> EquippedFocuses;
 
@@ -227,8 +239,8 @@ protected: /* Shooting FocusBase */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	TSubclassOf<UUserWidget> FocusSelectorWidgetClass;
 
-	/** The radial menu that allows Player to select the current FocusBase to shoot */
-	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	/** The radial menu Widget that allows Player to select the current FocusBase to shoot (spawned & set in BeginPlay()) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	UUserWidget_FocusSelector* FocusSelectorWidget;
 	
 protected: /* GameplayAbilitySystem */

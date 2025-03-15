@@ -105,6 +105,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+	/** @return The WidgetComponent that displays distance to Player */
 	FORCEINLINE UWidgetComponent* GetWidgetComponent() const { return FocusMarkerWidgetComponent; }
 	
 	/** GameplayAbilitySystem **/

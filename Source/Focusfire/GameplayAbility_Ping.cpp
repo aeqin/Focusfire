@@ -3,7 +3,9 @@
 
 #include "GameplayAbility_Ping.h"
 
+#include "ActorComponent_ManagerFocus.h"
 #include "FocusfireCharacter.h"
+#include "FocusfireGameState.h"
 #include "PingSphere.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -64,11 +66,8 @@ void UGameplayAbility_Ping::SpawnProspectivePing()
 	// Spawn prospective PingSphere
 	if (SpawnedPingSphereClass)
 	{
-		SpawnedPingSphere = GetWorld()->SpawnActorDeferred<APingSphere>(SpawnedPingSphereClass, _spawnPingTransform, _activator->GetOwner(), _activator->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-		if (IsValid(SpawnedPingSphere))
-		{
-			SpawnedPingSphere->FinishSpawning(_spawnPingTransform);
-		}
+		// Spawn using ManagerFocus, which keeps track of all PingSphere in game
+		SpawnedPingSphere = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->SpawnPing(_spawnPingTransform, SpawnedPingSphereClass, _activator);
 	}
 
 	// If activator has a camera, aim the PingSphere relative to the camera
