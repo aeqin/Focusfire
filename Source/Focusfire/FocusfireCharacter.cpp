@@ -174,7 +174,7 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent)) {
 		
 		// Jumping
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AFocusfireCharacter::StartJump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 
 		// Moving
@@ -200,6 +200,12 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		
 		// Ping distance adjustment
 		EnhancedInputComponent->BindAction(AdjustPingDistanceAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::AdjustPingDistance);
+
+		// Dodge roll
+		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Started, this, &AFocusfireCharacter::Dodge);
+
+		// Sprint
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::Sprint);
 	}
 	else
 	{
@@ -207,8 +213,19 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	}
 }
 
+void AFocusfireCharacter::StartJump(const FInputActionValue& Value)
+{
+	OnInputJump();
+}
+
 void AFocusfireCharacter::Move(const FInputActionValue& Value)
 {
+	// Do nothing if Player has tag to disable movement input
+	if (c_AbilitySystemComponent->HasMatchingGameplayTag(DisableMovementInputTag))
+	{
+		return;
+	}
+	
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
@@ -370,6 +387,29 @@ void AFocusfireCharacter::AdjustPingDistance(const FInputActionValue& Value)
 	OnInputAdjustPingDistance(_adjustmentDirection);
 }
 
+void AFocusfireCharacter::Dodge(const FInputActionValue& Value)
+{
+	// Do nothing if Player has tag to disable movement input
+	if (c_AbilitySystemComponent->HasMatchingGameplayTag(DisableMovementInputTag))
+	{
+		return;
+	}
+	
+	OnInputDodgeRoll(); // Signal BP
+}
+
+void AFocusfireCharacter::Sprint(const FInputActionValue& Value)
+{
+	if (Value.Get<bool>()) // On Press
+	{
+		GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed * 1.6;
+	}
+	else // On Release
+	{
+		GetCharacterMovement()->MaxWalkSpeed = DefaultWalkSpeed;
+	}
+}
+
 // END Input
 //////////////////////////////////////////////////////////////////////////
 
@@ -470,30 +510,29 @@ void AFocusfireCharacter::PivotAroundLockedFocus()
 
 void AFocusfireCharacter::OnGameplayAbilityStarted(UGameplayAbility* Ability)
 {
-	// During FocusDash ability, disable Player input
-	if (UGameplayAbility_FocusDash* _startedDash = Cast<UGameplayAbility_FocusDash>(Ability))
+	// Disable Player input on gameplay ability start
+	if (c_AbilitySystemComponent->HasMatchingGameplayTag(DisableAllInputTag))
 	{
-		if (APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController())
-		{
-			DisableInput(_PlayerController);
-		}
+		APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController();
+		DisableInput(_PlayerController);
 	}
 }
 
 void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& AbilityEndedData)
 {
+	// If Player no longer has the tag to disable input, re-enable it
+	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DisableAllInputTag))
+	{
+		APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController();
+		EnableInput(_PlayerController);
+	}
+	
 	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
 	{
 		// Lock on to the FocusBase that was just dashed to (allows use of its ability)
 		CurrentLockedOnFocus = CurrentDashableToFocus;
 		LockedOnFocusDistance = (CurrentLockedOnFocus->GetActorLocation() - GetActorLocation()).Length();
 		PivotAroundLockedFocus();
-		
-		// Re-enable input after "GameplayAbility.Focus.Dash"
-		if (APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController())
-		{
-			EnableInput(_PlayerController);
-		}
 
 		// BP handles activating "GameplayAbility.Focus.Period" right after
 		OnFocusDashEnded(AbilityEndedData.bWasCancelled);

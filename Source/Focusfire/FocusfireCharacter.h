@@ -106,6 +106,14 @@ class AFocusfireCharacter : public ACharacter, public IAbilitySystemInterface
 	/** Adjust Ping Distance Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* AdjustPingDistanceAction;
+
+	/** Dodge roll Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* DodgeAction;
+
+	/** Sprint Input Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* SprintAction;
 	
 public:
 	AFocusfireCharacter();
@@ -116,6 +124,9 @@ protected:
 	virtual void NotifyControllerChanged() override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	/** Called for jump input (separate from Character::Jump(), since jump may differ depending on Player state) */
+	void StartJump(const FInputActionValue& Value);
 	
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -140,11 +151,21 @@ protected:
 
 	/** Called for adjusting the spawned PingSphere distance */
 	void AdjustPingDistance(const FInputActionValue& Value);
+
+	/** Called for dodge roll input */
+	void Dodge(const FInputActionValue& Value);
+
+	/** Called for sprint input */
+	void Sprint(const FInputActionValue& Value);
 	
 	/** Used to reset Player's default gravity after ending a "locked-on" FocusBase state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	float DefaultGravityScale = 1.75f;
 
+	/** The Player's default walk speed */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	float DefaultWalkSpeed = 500.0f;
+	
 	/** The offset from the first-person POV camera to the Player's position. */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	FVector FirstPersonPOVCameraOffset;
@@ -255,6 +276,20 @@ protected: /* GameplayAbilitySystem */
 	/** The GameplayTag that denotes if the Player is currently in the "GameplayAbility.Ping" state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	FGameplayTag DuringPingTag;
+
+	/** The GameplayTag that denotes if the Player is currently in a GameplayAbility that should disable Player ALL input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag DisableAllInputTag;
+
+	/** The GameplayTag that denotes if the Player is currently in a GameplayAbility that should disable Player movement input */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag DisableMovementInputTag;
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.Jump"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputJump();
 	
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Dash"
@@ -292,6 +327,12 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnInputAdjustPingDistance(float AdjustmentDirection);
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.DodgeRoll"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputDodgeRoll();
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
