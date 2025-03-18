@@ -285,11 +285,16 @@ protected: /* GameplayAbilitySystem */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	FGameplayTag DisableMovementInputTag;
 
+	/** The GameplayTag that denotes if the Player is in "coyote-time" and should jump when immediately able to */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	FGameplayTag InputBuffer_Jump_Tag;
+
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Jump"
+	* @param bApplyInputBuffer: Whether to apply the GameplayEffect "coyote-time" to jump immeditely after GameplayAbility ends
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
-	void OnInputJump();
+	void OnInputJump(bool bApplyInputBuffer = true);
 	
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Dash"

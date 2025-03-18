@@ -16,6 +16,7 @@
 #include "AttributeSetHealth.h"
 #include "FocusBase.h"
 #include "FocusfireGameState.h"
+#include "GameplayAbility_DodgeRoll.h"
 #include "GameplayAbility_FocusDash.h"
 #include "GameplayAbility_FocusPeriod.h"
 #include "GameplayAbility_FocusShoot.h"
@@ -525,6 +526,16 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 	{
 		APlayerController* _PlayerController = GetWorld()->GetFirstPlayerController();
 		EnableInput(_PlayerController);
+	}
+
+	// If Player has the jump key buffered, then immediately attempt to jump
+	if (c_AbilitySystemComponent->HasMatchingGameplayTag(InputBuffer_Jump_Tag))
+	{
+		// Immediately jump after "GameplayAbility.DodgeRoll"
+		if (UGameplayAbility_DodgeRoll* _endedDodgeRoll = Cast<UGameplayAbility_DodgeRoll>(AbilityEndedData.AbilityThatEnded))
+		{
+			OnInputJump(false);
+		}
 	}
 	
 	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
