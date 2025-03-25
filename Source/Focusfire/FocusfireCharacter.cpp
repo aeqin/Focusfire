@@ -133,6 +133,7 @@ void AFocusfireCharacter::BeginPlay()
 	{
 		PlayerHUDWidget = CreateWidget<UUserWidget_PlayerHUD>(GetWorld(), PlayerHUDClass);
 		PlayerHUDWidget->AddToViewport();
+		PlayerHUDWidget->initializePlayerHUD(this);
 
 		// Set starting FocusBase to shoot
 		const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
@@ -188,13 +189,13 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		EnhancedInputComponent->BindAction(UseFocusAbilityAction, ETriggerEvent::Started, this, &AFocusfireCharacter::UseFocusAbility);
 
 		// Cancel a "locked-on" FocusBase during "GameplayAbility.Focus.Period"
-		EnhancedInputComponent->BindAction(CancelLockedFocusAction, ETriggerEvent::Started, this, &AFocusfireCharacter::CancelLockedFocus);
+		EnhancedInputComponent->BindAction(CancelLockedFocusAction, ETriggerEvent::Started, this, &AFocusfireCharacter::DoSecondaryAction);
 
 		// Toggle the FocusBase selector radial menu
 		EnhancedInputComponent->BindAction(FocusSelectorAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::ToggleFocusSelector);
 
 		// Ping
-		EnhancedInputComponent->BindAction(PingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::DoPing);
+		EnhancedInputComponent->BindAction(PingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::DoSecondaryAction);
 
 		// Cancel Ping
 		EnhancedInputComponent->BindAction(CancelPingAction, ETriggerEvent::Triggered, this, &AFocusfireCharacter::CancelPing);
@@ -299,14 +300,36 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 
 void AFocusfireCharacter::CancelLockedFocus(const FInputActionValue& Value)
 {
+	// Comment because check in DoSecondaryAction()
+	// if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
+	// {
+	// 	return; // NOT in GameplayAbility.Focus.Period state, so do nothing
+	// }
+
+	// Unlock the "locked-on" FocusBase, to prevent pivoting around it anymore
+	CurrentLockedOnFocus = nullptr;
+	OnInputFocusPeriodCancelLocked(); // Will signal BP to "input cancel" the "GameplayAbility.Focus.Period", which will re-slowdown the Player
+
+	// Modify HUD to display elements before locked focus
+	PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
+}
+
+void AFocusfireCharacter::DoSecondaryAction(const FInputActionValue& Value)
+{
+	// Only Ping if in first person POV
 	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
 	{
 		return; // NOT in GameplayAbility.Focus.Period state, so do nothing
 	}
 
-	// Unlock the "locked-on" FocusBase, to prevent pivoting around it anymore
-	CurrentLockedOnFocus = nullptr;
-	OnInputFocusPeriodCancelLocked(); // Will signal BP to "input cancel" the "GameplayAbility.Focus.Period", which will re-slowdown the Player
+	if (CurrentDashableToFocus != nullptr)
+	{
+		CancelLockedFocus(Value);
+	}
+	else
+	{
+		DoPing(Value);
+	}
 }
 
 void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
@@ -357,11 +380,12 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 
 void AFocusfireCharacter::DoPing(const FInputActionValue& Value)
 {
-	// Only Ping if in first person POV
-	if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
-	{
-		return; // NOT in GameplayAbility.Focus.Period state, so do nothing
-	}
+	// Comment because check in DoSecondaryAction()
+	// // Only Ping if in first person POV
+	// if (not c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag))
+	// {
+	// 	return; // NOT in GameplayAbility.Focus.Period state, so do nothing
+	// }
 
 	if (Value.Get<bool>()) // On Press
 	{
@@ -460,7 +484,7 @@ void AFocusfireCharacter::SwitchCameraEnd()
 void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 {
 	// If Player does not currently have "GameplayAbility.Focus.Period" active, then return
-	if (not (c_AbilitySystemComponent and c_AbilitySystemComponent->HasMatchingGameplayTag(UGameplayTagsManager::Get().RequestGameplayTag("GameplayAbility.Focus.Period"))))
+	if (not (c_AbilitySystemComponent and c_AbilitySystemComponent->HasMatchingGameplayTag(DuringFocusPeriodTag)))
 	{
 		return;
 	}
@@ -492,10 +516,16 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
 		{
 			if (_FocusBase->GetCanBeInteractedWith())
+			{
 				CurrentDashableToFocus = _FocusBase; // Actually set FocusBase
+			}
 		}
 	}
 	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
+
+	// Change HUD
+	PlayerHUDWidget->OnFocusDashisPossible(CurrentDashableToFocus != nullptr);
+	PlayerHUDWidget->ToggleFocusLockedHUDElements(CurrentLockedOnFocus != nullptr);
 }
 
 void AFocusfireCharacter::PivotAroundLockedFocus()

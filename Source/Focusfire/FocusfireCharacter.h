@@ -140,6 +140,9 @@ protected:
 	/** Called for cancelling "lock-on" FocusBase input */
 	void CancelLockedFocus(const FInputActionValue& Value);
 
+	/** Called for cancelling "lock-on" FocusBase input / or spawning a PingSphere */
+	void DoSecondaryAction(const FInputActionValue& Value);
+	
 	/** Called for opening/closing FocusBase selection menu */
 	void ToggleFocusSelector(const FInputActionValue& Value);
 
@@ -214,12 +217,6 @@ protected: /* FocusBase under crosshair */
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void OnTickRaycastForDashableToFocus();
-
-	/** 
-	* Event that fires if CurrentDashableToFocus changes
-	*/
-	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
-	FOnFocusInRangeChanged OnDashableToFocusChanged;
 
 	/** The current FocusBase within range of using its ability */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -414,6 +411,12 @@ public:
 	/** Returns the range at which a FocusBase's ability is use-able **/
 	FORCEINLINE float GetRangeOfFocusAbilityUseable() const { return RangeOfFocusAbilityUseable; }
 
+	/** 
+	* Event that fires if CurrentDashableToFocus changes
+	*/
+	UPROPERTY(BlueprintAssignable, Category = "FocusfireCharacter")
+	FOnFocusInRangeChanged OnDashableToFocusChanged;
+	
 	/** 
 	* Gets the Player's potential position from the locked-on focus given the ideal distance (& current camera rotation)
 	* @param LockedFocus: The FocusBase to potentially pivot around
