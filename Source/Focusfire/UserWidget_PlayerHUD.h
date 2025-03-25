@@ -50,7 +50,7 @@ public:
 	 * @param bCanFocusDash: Is Player able to cast "GameplayAbility.Focus.Dash"?
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Category="PlayerHUD")
-	void OnFocusDashisPossible(const bool bCanFocusDash);
+	void ToggleFocusDashHUDElements(const bool bCanFocusDash);
 	
 	/**
 	 * Event called when the Player enters/exits "GameplayAbility.Focus.Period" state

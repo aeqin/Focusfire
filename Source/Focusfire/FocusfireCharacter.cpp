@@ -490,7 +490,7 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 	}
 
 	// Begin with potential FocusBase set as nullptr
-	CurrentDashableToFocus = nullptr;
+	AFocusBase* _temp_DashableToFocus = nullptr;
 
 	// Attempt to raycast a valid FocusBase to dash to
 	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
@@ -517,15 +517,20 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 		{
 			if (_FocusBase->GetCanBeInteractedWith())
 			{
-				CurrentDashableToFocus = _FocusBase; // Actually set FocusBase
+				_temp_DashableToFocus = _FocusBase; // Actually set FocusBase
 			}
 		}
 	}
-	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
 
-	// Change HUD
-	PlayerHUDWidget->OnFocusDashisPossible(CurrentDashableToFocus != nullptr);
-	PlayerHUDWidget->ToggleFocusLockedHUDElements(CurrentLockedOnFocus != nullptr);
+	// Only notify if raycast target changed from last frame
+	if (CurrentDashableToFocus != _temp_DashableToFocus)
+	{
+		CurrentDashableToFocus = _temp_DashableToFocus;
+		OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
+		
+		// Change HUD
+		PlayerHUDWidget->ToggleFocusDashHUDElements(CurrentDashableToFocus != nullptr);
+	}
 }
 
 void AFocusfireCharacter::PivotAroundLockedFocus()
@@ -575,6 +580,9 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 		LockedOnFocusDistance = (CurrentLockedOnFocus->GetActorLocation() - GetActorLocation()).Length();
 		PivotAroundLockedFocus();
 
+		// Toggle HUD
+		PlayerHUDWidget->ToggleFocusLockedHUDElements(true);
+
 		// BP handles activating "GameplayAbility.Focus.Period" right after
 		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
 		UE_LOG(LogTemp, Warning, TEXT("ccc LOCK FOCUS"));
@@ -582,6 +590,10 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 	else if (UGameplayAbility_FocusPeriod* _endedPeriod = Cast<UGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))
 	{
 		CurrentLockedOnFocus = nullptr; // Clear any FocusBase that was locked onto
+		
+		// Toggle HUD
+		PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
+		
 		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
 		UE_LOG(LogTemp, Warning, TEXT("ccc UN LOCK FOCUS"));
 	}

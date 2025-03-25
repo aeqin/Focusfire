@@ -61,8 +61,8 @@ void UUserWidget_PlayerHUD::AddTextToTextLayoutWidgetByReason(UTextBlock* TextWi
 		}
 	}
 
-	// Set the text of the Text widget
-	TextWidget->SetText(NewText);
+	// Set the text of the Text widget to the top of the stack
+	TextWidget->SetText(Map_TextWidget_to_TextStack[TextWidget].Last().Value);
 
 	// Debugging
 	UE_LOG(LogTemp, Warning, TEXT("-------------------"));
