@@ -11,6 +11,7 @@
 #include "GameplayEffectTypes.h"
 #include "FocusfireCharacter.generated.h"
 
+class APingSphere;
 class UUserWidget_PlayerHUD;
 class UUserWidget_FocusSelector;
 struct FGameplayAttribute;
@@ -210,6 +211,10 @@ protected: /* FocusBase under crosshair */
 	/** The current FocusBase in range that can be dashed to with "GameplayAbility.Focus.Dash", under crosshair */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	AFocusBase* CurrentDashableToFocus;
+
+	/** The current PingSphere in range, under crosshair (to be used to shoot FocusBase to a specific location) */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	APingSphere* CurrentPingUnderCrosshair;
 	
 	/** 
 	* Called every Tick(), during the "GameplayAbility.Focus.Period". Sets CurrentDashableToFocus, if there is any FocusBase
@@ -401,6 +406,9 @@ public:
 
 	/** Returns The current FocusBase in range to have its ability used **/
 	FORCEINLINE AFocusBase* GetCurrentLockedOnFocus() const { return CurrentLockedOnFocus; }
+
+	/** Returns The current FocusBase in range to have its ability used **/
+	FORCEINLINE APingSphere* GetCurrentPingUnderCrosshair() const { return CurrentPingUnderCrosshair; }
 
 	/** Returns The arrow component of where to spawn FocusBase **/
 	FORCEINLINE UArrowComponent* GetFocusSpawnArrow() const { return c_FocusShootArrow; }

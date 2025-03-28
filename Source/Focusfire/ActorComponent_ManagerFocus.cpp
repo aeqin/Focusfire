@@ -178,14 +178,30 @@ AFocusBase* UActorComponent_ManagerFocus::ShootFocusInDirection(FTransform Spawn
 		_spawnedFocus->FinishSpawning(SpawnTransform);
 		_spawnedFocus->ShootInDirection(ShootDirection);
 		
-		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref if this new FocusBase to map
+		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref of this new FocusBase to map
+		_spawnedFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnFocusDestroyed); // When destroyed, remove ref from map
+	}
+	return _spawnedFocus;
+}
+
+AFocusBase* UActorComponent_ManagerFocus::ShootFocusToLocation(FTransform SpawnTransform, FVector LockLocation,
+	TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner)
+{
+	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
+	AFocusBase* _spawnedFocus = GetWorld()->SpawnActorDeferred<AFocusBase>(FocusTypeToSpawn, SpawnTransform, Spawner->GetOwner(), Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (IsValid(_spawnedFocus))
+	{
+		_spawnedFocus->FinishSpawning(SpawnTransform);
+		_spawnedFocus->ShootToLocation(LockLocation);
+		
+		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref of this new FocusBase to map
 		_spawnedFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnFocusDestroyed); // When destroyed, remove ref from map
 	}
 	return _spawnedFocus;
 }
 
 APingSphere* UActorComponent_ManagerFocus::SpawnPing(FTransform SpawnTransform, TSubclassOf<class APingSphere> PingClassToSpawn,
-	AActor* Spawner)
+                                                     AActor* Spawner)
 {
 	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
 	APingSphere* _spawnedPing = GetWorld()->SpawnActorDeferred<APingSphere>(PingClassToSpawn, SpawnTransform, Spawner->GetOwner(), Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);

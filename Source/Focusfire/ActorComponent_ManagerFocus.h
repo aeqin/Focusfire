@@ -83,6 +83,16 @@ public:
 	AFocusBase* ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
 
 	/**
+	 * Spawn a FocusBase at the specified location, then shoot it forward
+	 * @param SpawnTransform: The location in world space to spawn the FocusBase
+	 * @param LockLocation: The location that the FocusBase will move to
+	 * @param FocusTypeToSpawn: The type of FocusBase to spawn (such as FocusBaseRebound)
+	 * @param Spawner: The AActor that spawned this FocusBase
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
+	AFocusBase* ShootFocusToLocation(FTransform SpawnTransform, FVector LockLocation, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
+	
+	/**
 	 * Spawn a PingSphere at the specified location
 	 * @param SpawnTransform: The location in world space to spawn the PingSphere
 	 * @param PingClassToSpawn: The type of PingSphere to spawn

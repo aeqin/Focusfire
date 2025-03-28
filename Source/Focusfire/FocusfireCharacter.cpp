@@ -23,6 +23,7 @@
 #include "GameplayEffectExtension.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
+#include "PingSphere.h"
 #include "UserWidget_FocusSelector.h"
 #include "UserWidget_PlayerHUD.h"
 #include "Blueprint/UserWidget.h"
@@ -491,10 +492,11 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 
 	// Begin with potential FocusBase set as nullptr
 	AFocusBase* _temp_DashableToFocus = nullptr;
+	APingSphere* _temp_PingUnderCrosshair = nullptr;
 
 	// Attempt to raycast a valid FocusBase to dash to
 	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
-	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast;
+	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast * 2;
 	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
 	const FColor _ColorBeforeHit = FColor::Green;
 	const FColor _ColorAfterHit = FColor::Red;
@@ -513,24 +515,39 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 		_ColorAfterHit
 	))
 	{
-		if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
+		if (APingSphere* _PingSphere = Cast<APingSphere>(_HitResult.GetActor()))
 		{
-			if (_FocusBase->GetCanBeInteractedWith())
+			_temp_PingUnderCrosshair = _PingSphere;
+		}
+		
+		// Check if FocusBase is in dash range
+		if (_HitResult.Distance <= RangeOfDashableToFocusRaycast)
+		{
+			if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
 			{
-				_temp_DashableToFocus = _FocusBase; // Actually set FocusBase
+				if (_FocusBase->GetCanBeInteractedWith())
+				{
+					_temp_DashableToFocus = _FocusBase; // Actually set FocusBase
+				}
 			}
 		}
 	}
 
 	// Only notify if raycast target changed from last frame
-	if (CurrentDashableToFocus != _temp_DashableToFocus)
+	if (CurrentPingUnderCrosshair != _temp_PingUnderCrosshair) // Ping
+    {
+		CurrentPingUnderCrosshair = _temp_PingUnderCrosshair;
+    }
+	if (CurrentDashableToFocus != _temp_DashableToFocus) // Dash-able FocusBase
 	{
 		CurrentDashableToFocus = _temp_DashableToFocus;
-		OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
 		
 		// Change HUD
 		PlayerHUDWidget->ToggleFocusDashHUDElements(CurrentDashableToFocus != nullptr);
 	}
+
+	// Update Crosshair per tick
+	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
 }
 
 void AFocusfireCharacter::PivotAroundLockedFocus()

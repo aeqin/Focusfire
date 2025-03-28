@@ -127,11 +127,30 @@ void AFocusBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (flag_MovingToLockInPlace)
+	{
+		FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
+		FVector _Direction_CurrentVelocity = c_ProjectileMovementComponent->Velocity.GetSafeNormal();
+		if (_Direction_LockLocation.Dot(_Direction_CurrentVelocity) < 0.0f) // If negative dot, then past the ideal lock position
+		{
+			SetActorLocation(IdealLockPosition);
+			LockInPlace(true);
+			flag_MovingToLockInPlace = false;
+		}
+	}
 }
 
 void AFocusBase::ShootInDirection(const FVector Direction)
 {
 	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
+}
+
+void AFocusBase::ShootToLocation(const FVector LockPlace)
+{
+	IdealLockPosition = LockPlace;
+	flag_MovingToLockInPlace = true;
+	FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
+	c_ProjectileMovementComponent->Velocity = _Direction_LockLocation * ShootSpeed;
 }
 
 void AFocusBase::LockInPlace(bool bResetLifetime)

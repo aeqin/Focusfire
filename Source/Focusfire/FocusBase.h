@@ -86,6 +86,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	float DamageDefault = 100.0f;
 
+	/** Whether this FocusBase wants to lock in a specific place */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	bool flag_MovingToLockInPlace = false;
+	
+	/** The location that the FocusBase wants to lock position upon reaching */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
+	FVector IdealLockPosition;
+	
 	/** 
 	* Called in response to the OnComponentBeginOverlap event
 	* @param OverlappedComponent: A pointer to the component that triggered the event (i.e., the component of the actor receiving the event).
@@ -121,6 +129,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
 	void ShootInDirection(const FVector Direction);
 
+	/** 
+	* Shoot the FocusBase forward at speed, to eventually lock in a place
+	* @param LockPlace: The location that the FocusBase wants to travel to
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	void ShootToLocation(const FVector LockPlace);
+	
 	/** 
 	* Lock the FocusBase in place (cancel velocity)
 	*/
