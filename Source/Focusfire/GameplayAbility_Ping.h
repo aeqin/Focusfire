@@ -17,7 +17,7 @@ class FOCUSFIRE_API UGameplayAbility_Ping : public UGameplayAbility
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Ping", meta = (AllowPrivateAccess = "true"))
-	float PingCurrentRange;
+	float CurrentRaycastHitDistance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Ping", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<APingSphere> SpawnedPingSphereClass;
@@ -30,6 +30,12 @@ class FOCUSFIRE_API UGameplayAbility_Ping : public UGameplayAbility
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Ping")
 	void SpawnProspectivePing();
+
+	/** 
+	* Every tick, spawn a raycast, if ping is beyond location where raycast hits an obstruction, then move the ping to the new hit location
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Ping")
+	void OnTickRaycastForPingDistance();
 
 	/** The camera component to position the PingSphere relative to */
 	UPROPERTY(BlueprintReadWrite, Category="Ping", meta = (AllowPrivateAccess = "true"))

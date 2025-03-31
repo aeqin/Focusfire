@@ -12,6 +12,11 @@
 
 void UGameplayAbility_Ping::SpawnProspectivePing()
 {
+	OnTickRaycastForPingDistance();
+}
+
+void UGameplayAbility_Ping::OnTickRaycastForPingDistance()
+{
 	AActor* _activator = CurrentActorInfo->AvatarActor.Get();
 	if (not _activator) return;
 
@@ -36,7 +41,8 @@ void UGameplayAbility_Ping::SpawnProspectivePing()
 	const FColor _ColorBeforeHit = FColor::Green;
 	const FColor _ColorAfterHit = FColor::Red;
 	FHitResult _HitResult;
-	FTransform _spawnPingTransform;
+	FVector _raycastHitLocation;
+	float _raycastHitDistance;
 	if (UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
 		_TraceStart,
@@ -53,27 +59,41 @@ void UGameplayAbility_Ping::SpawnProspectivePing()
 	))
 	{
 		// Set current distance of Ping as hit location
-		PingCurrentRange = _HitResult.Distance;
-		_spawnPingTransform.SetLocation(_HitResult.Location);
+		CurrentRaycastHitDistance = _HitResult.Distance;
+		_raycastHitDistance = _HitResult.Distance;
+		_raycastHitLocation = _HitResult.Location;
 	}
 	else
 	{
 		// Set current distance of Ping as max distance
-		PingCurrentRange = MaximumPingDistance;
-		_spawnPingTransform.SetLocation(_TraceEnd);
+		CurrentRaycastHitDistance = MaximumPingDistance;
+		_raycastHitDistance = MaximumPingDistance;
+		_raycastHitLocation = _TraceEnd;
 	}
 
-	// Spawn prospective PingSphere
-	if (SpawnedPingSphereClass)
+	// If a ping hasn't yet been spawned, spawn prospective PingSphere
+	if (SpawnedPingSphere == nullptr && SpawnedPingSphereClass)
 	{
 		// Spawn using ManagerFocus, which keeps track of all PingSphere in game
+		FTransform _spawnPingTransform;
+		_spawnPingTransform.SetLocation(_raycastHitLocation);
 		SpawnedPingSphere = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->SpawnPing(_spawnPingTransform, SpawnedPingSphereClass, _activator);
+
+		// If activator has a camera, aim the PingSphere relative to the camera
+		if (FollowCamera)
+		{
+			SpawnedPingSphere->AttachToComponent(FollowCamera, FAttachmentTransformRules::KeepWorldTransform);
+		}
 	}
 
-	// If activator has a camera, aim the PingSphere relative to the camera
-	if (FollowCamera)
+	// If a ping IS already spawned, then adjust its location IF AND ONLY IF it is past the location of the raycast hit
+	else
 	{
-		SpawnedPingSphere->AttachToComponent(FollowCamera, FAttachmentTransformRules::KeepWorldTransform);
+		float _CurrentPingDistance = (_TraceStart - SpawnedPingSphere->GetActorLocation()).Length();
+		if (_CurrentPingDistance > _raycastHitDistance)
+		{
+			SpawnedPingSphere->SetActorLocation(_raycastHitLocation); // Set to raycast hit location
+		}
 	}
 }
 
