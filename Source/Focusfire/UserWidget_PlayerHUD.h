@@ -20,6 +20,7 @@ enum class ETextReason : uint8 // Used to keep track of Text stack
 	PING,
 	FOCUS_DASH,
 	FOCUS_LOCK,
+	SHOOT_LOCK,
 };
 
 /**
@@ -45,6 +46,13 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category="PlayerHUD")
 	void OnCurrentlySelectedFocusChanged(const FString& FocusStringToDisplay);
 
+	/**
+	 * Event called when the Player is able to cast "GameplayAbility.Focus.Shoot", while crosshair is over a PingSphere
+	 * @param bCanShootToLock: If Player shoots, will the FocusBase lock in the position of the PingSphere?
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Category="PlayerHUD")
+	void ToggleShootToLockElements(const bool bCanShootToLock);
+	
 	/**
 	 * Event called when the Player is able to cast "GameplayAbility.Focus.Dash"
 	 * @param bCanFocusDash: Is Player able to cast "GameplayAbility.Focus.Dash"?

@@ -494,49 +494,24 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 	AFocusBase* _temp_DashableToFocus = nullptr;
 	APingSphere* _temp_PingUnderCrosshair = nullptr;
 
-	// Attempt to raycast a valid FocusBase to dash to
-	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
-	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast * 2;
-	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
-	const FColor _ColorBeforeHit = FColor::Green;
-	const FColor _ColorAfterHit = FColor::Red;
-	FHitResult _HitResult;
-	if (UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		_TraceStart,
-		_TraceEnd,
-		UEngineTypes::ConvertToTraceType(ECC_Visibility),
-		false,
-		_ActorsToIgnore,
-		EDrawDebugTrace::None, // Set to EDrawDebugTrace::None if not debugging, otherwise EDrawDebugTrace::ForDuration
-		_HitResult,
-		true,
-		_ColorBeforeHit,
-		_ColorAfterHit
-	))
+	// Raycasts
+	if (AActor* _hitActor = RaycastForFocusOrPing(true)) // First attempt to hit a FocusBase (because FocusBase takes priority over PingSphere)
 	{
-		if (APingSphere* _PingSphere = Cast<APingSphere>(_HitResult.GetActor()))
-		{
-			_temp_PingUnderCrosshair = _PingSphere;
-		}
-		
-		// Check if FocusBase is in dash range
-		if (_HitResult.Distance <= RangeOfDashableToFocusRaycast)
-		{
-			if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
-			{
-				if (_FocusBase->GetCanBeInteractedWith())
-				{
-					_temp_DashableToFocus = _FocusBase; // Actually set FocusBase
-				}
-			}
-		}
+		_temp_DashableToFocus = Cast<AFocusBase>(_hitActor);
+	}
+	else
+	{
+		_hitActor = RaycastForFocusOrPing(false); // If it fails, then attempt to hit a PingSphere
+		_temp_PingUnderCrosshair = Cast<APingSphere>(_hitActor);
 	}
 
 	// Only notify if raycast target changed from last frame
 	if (CurrentPingUnderCrosshair != _temp_PingUnderCrosshair) // Ping
     {
 		CurrentPingUnderCrosshair = _temp_PingUnderCrosshair;
+
+		// Change HUD
+		PlayerHUDWidget->ToggleShootToLockElements(CurrentPingUnderCrosshair != nullptr);
     }
 	if (CurrentDashableToFocus != _temp_DashableToFocus) // Dash-able FocusBase
 	{
@@ -548,6 +523,57 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 
 	// Update Crosshair per tick
 	OnDashableToFocusChanged.Broadcast(CurrentDashableToFocus);
+}
+
+AActor* AFocusfireCharacter::RaycastForFocusOrPing(bool bQueryFocusOnly)
+{
+	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
+	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast * 2;
+	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
+	const FColor _ColorBeforeHit = FColor::Green;
+	const FColor _ColorAfterHit = FColor::Red;
+	ETraceTypeQuery _TraceType = bQueryFocusOnly ? UEngineTypes::ConvertToTraceType(ECC_Focus) : UEngineTypes::ConvertToTraceType(ECC_Ping);
+	FHitResult _HitResult;
+	if (UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		_TraceStart,
+		_TraceEnd,
+		_TraceType,
+		false,
+		_ActorsToIgnore,
+		EDrawDebugTrace::None, // Set to EDrawDebugTrace::None if not debugging, otherwise EDrawDebugTrace::ForDuration
+		_HitResult,
+		true,
+		_ColorBeforeHit,
+		_ColorAfterHit
+	))
+	{
+		if (bQueryFocusOnly)
+		{
+			// Check if FocusBase is in dash range
+			if (_HitResult.Distance <= RangeOfDashableToFocusRaycast)
+			{
+				if (AFocusBase* _FocusBase = Cast<AFocusBase>(_HitResult.GetActor()))
+				{
+					if (_FocusBase->GetCanBeInteractedWith())
+					{
+						return _FocusBase;
+					}
+				}
+			}
+		}
+
+		// Only attempt to hit PingSphere if NOT querying for FocusBase
+		else
+		{
+			if (APingSphere* _PingSphere = Cast<APingSphere>(_HitResult.GetActor()))
+			{
+				return _PingSphere;
+			}
+		}
+	}
+	
+	return nullptr;
 }
 
 void AFocusfireCharacter::PivotAroundLockedFocus()

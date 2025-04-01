@@ -28,6 +28,9 @@ class UAbilitySystemComponent;
 class UAttributeSetHealth;
 struct FInputActionValue;
 
+#define ECC_Focus ECC_GameTraceChannel3
+#define ECC_Ping ECC_GameTraceChannel4
+
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnFocusInRangeChanged, AFocusBase*, FocusInRange);
 
@@ -223,6 +226,14 @@ protected: /* FocusBase under crosshair */
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	void OnTickRaycastForDashableToFocus();
 
+	/** 
+	* Raycasts for any FocusBase or PingSphere in range
+	* @param bQueryFocusOnly: Whether to ONLY cast for FocusBase, ignoring PingSphere
+	* @returns The nearest FocusBase or PingSphere in range
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
+	AActor* RaycastForFocusOrPing(bool bQueryFocusOnly);
+	
 	/** The current FocusBase within range of using its ability */
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	AFocusBase* CurrentLockedOnFocus;
