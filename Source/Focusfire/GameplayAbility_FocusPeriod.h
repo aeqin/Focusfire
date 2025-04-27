@@ -6,6 +6,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "GameplayAbility_FocusPeriod.generated.h"
 
+class AFocusfireCharacter;
 class AFocusPeriodSlowZone;
 /**
  * 
@@ -19,6 +20,14 @@ public:
 	UGameplayAbility_FocusPeriod();
 
 protected:
+	/** The AFocusfireCharacter that activated this ability */
+	UPROPERTY(BlueprintReadOnly)
+	AFocusfireCharacter* PlayerFocusPeriodSpawner;
+
+	/** The type of AFocusPeriodSlowZone to spawn */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<AFocusPeriodSlowZone> FocusPeriodSlowZoneClass;
+	
 	/** How slow should the time be during "focus" state */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float SlowTimeDilation = 0.2f;
@@ -30,7 +39,6 @@ protected:
 	/** The sphere area of effect that slows down AActors */
 	UPROPERTY(BlueprintReadOnly)
 	AFocusPeriodSlowZone* SpawnedFocusedPeriodSlowZone;
-	
 	
 	/** How long the "focus" state will last */
 	UPROPERTY(EditAnywhere)
@@ -46,12 +54,20 @@ protected:
 	void TickPeriodTimer();
 
 	/** 
-	* Slow down the Player, and any related Actors in a sphere radius. Also freezes the player in place (if FocusPeriod happens
-	* while a FocusBase is locked on)
+	* Checks that the activating AActor is a valid Player and stores it in PlayerFocusPeriodSpawner
+	* @returns: Whether the activator for this ability is valid, if false, then BP should end the ability
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusPeriod")
-	void FocusPeriodStart();
+	bool OnFocusPeriodStartCheck();
 
+	/**
+	 * After the FocusPeriodSlowZone is spawned on server, initialize it
+	 * @param SpawnedFocusedSlowZone: The spawned AFocusPeriodSlowZone
+	 * @return A AFocusPeriodSlowZone that is initialized (attached to spawner)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "FocusPeriod")
+	void OnFocusPeriodSlowZoneSpawned(AFocusPeriodSlowZone* SpawnedFocusedSlowZone);
+	
 	/** 
 	* Un-freeze the player locked in place, and re-add player to be once again slowed by SpawnedFocusedPeriodSlowZone
 	*/

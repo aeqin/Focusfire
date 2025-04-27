@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "FocusPeriodSlowZone.generated.h"
 
+class AFocusfireGameState;
 class USphereComponent;
 
 UCLASS()
@@ -28,6 +29,14 @@ class FOCUSFIRE_API AFocusPeriodSlowZone : public AActor
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	TSet<AActor*> Set_IgnoreSlowdownActors;
 
+	/** The AActor that spawned this FocusPeriodSlowZone */
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	AActor* SpawnerActor;
+
+	/** The AActor that spawned this FocusPeriodSlowZone */
+	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	AFocusfireGameState* FocusfireGameState;
+	
 public:	
 	// Sets default values for this actor's properties
 	AFocusPeriodSlowZone();
@@ -41,11 +50,18 @@ public:
 	float StrengthOfTimeSlowdown = 0.1f;
 
 	/**
+	 * Slow down the actor that spawned this AFocusPeriodZone
+	 * @param SpawnActor: A pointer to the AActor that spawned this FocusPeriodSlowZone
+	 */
+	UFUNCTION(BlueprintCallable, Category = "FocusPeriodSlowZone")
+	void SetAndSlowSpawnerActor(AActor* SpawnActor);
+	
+	/**
 	 * Either add / remove an Actor to ignore for the time slow down
 	 * @param ActorToIgnore: A pointer to the AActor that should not be slowed down
 	 * @param bDoAddException: Whether or not the particular actor should not be slowed down, or if previously excepted, slowed down
 	 */
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable, Category = "FocusPeriodSlowZone")
 	void SetActorSlowdownException(AActor* ActorToIgnore, bool bDoAddException);
 
 protected:

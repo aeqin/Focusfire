@@ -5,8 +5,8 @@
 
 #include "FocusfireCharacter.h"
 #include "FocusPeriodSlowZone.h"
-#include "Chaos/SoftsExternalForces.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Tasks/GameplayTask_SpawnActor.h"
 
 UGameplayAbility_FocusPeriod::UGameplayAbility_FocusPeriod()
 {
@@ -24,51 +24,57 @@ void UGameplayAbility_FocusPeriod::TickPeriodTimer()
 	}
 }
 
-void UGameplayAbility_FocusPeriod::FocusPeriodStart()
+bool UGameplayAbility_FocusPeriod::OnFocusPeriodStartCheck()
 {
-	// Valid AActor
-	AActor* _actor = CurrentActorInfo->AvatarActor.Get();
-	if (_actor)
+	// Check Valid Player
+	PlayerFocusPeriodSpawner = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get());
+	if (IsValid(PlayerFocusPeriodSpawner))
 	{
-		// Spawn an area of effect that also slows down other FocusBase/Player's in radius
-		
-		SpawnedFocusedPeriodSlowZone = GetWorld()->SpawnActorDeferred<AFocusPeriodSlowZone>(AFocusPeriodSlowZone::StaticClass(), _actor->GetTransform(), _actor->GetOwner(), _actor->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-		if (IsValid(SpawnedFocusedPeriodSlowZone))
-		{
-			SpawnedFocusedPeriodSlowZone->AttachToActor(_actor, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-			SpawnedFocusedPeriodSlowZone->RadiusOfSlowEffect = SlowTimeRadius;
-			SpawnedFocusedPeriodSlowZone->StrengthOfTimeSlowdown = SlowTimeDilation;
-			SpawnedFocusedPeriodSlowZone->FinishSpawning(_actor->GetTransform());
-		}
+		return true;
 	}
-	
-	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
+	else
 	{
-		if (_player->GetCurrentLockedOnFocus())
+		return false;	
+	}
+}
+
+void UGameplayAbility_FocusPeriod::OnFocusPeriodSlowZoneSpawned(AFocusPeriodSlowZone* SpawnedFocusedSlowZone)
+{
+	// Once FocusPeriodSpawner has been spawned on server, attach it to Player
+	SpawnedFocusedPeriodSlowZone = SpawnedFocusedSlowZone;
+	if (IsValid(SpawnedFocusedPeriodSlowZone))
+	{
+		SpawnedFocusedPeriodSlowZone->AttachToActor(PlayerFocusPeriodSpawner, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		SpawnedFocusedPeriodSlowZone->RadiusOfSlowEffect = SlowTimeRadius;
+		SpawnedFocusedPeriodSlowZone->StrengthOfTimeSlowdown = SlowTimeDilation;
+		SpawnedFocusedPeriodSlowZone->SetAndSlowSpawnerActor(PlayerFocusPeriodSpawner);
+
+		// If Player is locked on to a Focus, then disable Player's gravity
+		if (PlayerFocusPeriodSpawner->GetCurrentLockedOnFocus())
 		{
 			// Disable Player gravity & set velocity to zero
-			_player->SetGravityByMultiplier(0.0);
-			_player->GetCharacterMovement()->Velocity = FVector(0, 0, 0);
+			PlayerFocusPeriodSpawner->SetGravityByMultiplier(0.0);
+			PlayerFocusPeriodSpawner->GetCharacterMovement()->Velocity = FVector(0, 0, 0);
 			UE_LOG(LogTemp, Warning, TEXT("ccc FREEZE PLAYER DURING LOCKED FOCUS"));
 
 			// As Player is "locked" in place to a FocusBase, reset Player's time dilation, to allow Player to pivot around
 			// FocusBase at normal speed
-			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(_player, true);
+			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(PlayerFocusPeriodSpawner, true);
 		}
 	}
 }
 
 void UGameplayAbility_FocusPeriod::FocusPeriodCancelLock()
 {
-	if (AFocusfireCharacter* _player = Cast<AFocusfireCharacter>(CurrentActorInfo->AvatarActor.Get()))
+	if (IsValid(PlayerFocusPeriodSpawner))
 	{
-		if (_player->GetCurrentLockedOnFocus() == nullptr) // Player itself will unset its CurrentLockedOnFocus
+		if (PlayerFocusPeriodSpawner->GetCurrentLockedOnFocus() == nullptr) // Player itself will unset its CurrentLockedOnFocus
 		{
 			// Re-enable Player gravity
-			_player->SetGravityByMultiplier(1.0);
+			PlayerFocusPeriodSpawner->SetGravityByMultiplier(1.0);
 
 			// As Player is no longer "locked" in place to a FocusBase, re-slow down Player's time dilation
-			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(_player, false);
+			SpawnedFocusedPeriodSlowZone->SetActorSlowdownException(PlayerFocusPeriodSpawner, false);
 		}
 	}
 }

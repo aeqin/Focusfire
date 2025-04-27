@@ -127,6 +127,8 @@ public:
 protected:
 	virtual void NotifyControllerChanged() override;
 
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	/** Called for jump input (separate from Character::Jump(), since jump may differ depending on Player state) */
@@ -262,8 +264,14 @@ protected: /* Player HUD */
 	
 protected: /* Shooting FocusBase */
 	/** Currently selected FocusBase that will be shot */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
 	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
+
+	/** RPC to request the Server to replicate the value of the TypeOfFocusToShoot variable
+	 * @param NextTypeOfFocusToShoot: The new type of focus of shoot, to be replicated
+	 */
+	UFUNCTION(Server, Reliable, Category = "FocusfireCharacter")
+	void RPC_UpdateTypeOfFocusToShoot(TSubclassOf<AFocusBase> NextTypeOfFocusToShoot);
 
 	/** List of all possible FocusBase equipped to Player */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
@@ -279,9 +287,16 @@ protected: /* Shooting FocusBase */
 	
 protected: /* GameplayAbilitySystem */
 	/** AbilitySystemComponent **/
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	TObjectPtr<UAbilitySystemComponent> c_AbilitySystemComponent;
 
+	/** A list of GameplayAbilities that the Player starts with **/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
+	TArray<TSubclassOf<UGameplayAbility>> list_Default_GameplayAbilities;
+
+	UPROPERTY()
+	bool flag_GameplayAbilities_Initialized;
+	
 	/** The GameplayTag that denotes if the Player is currently in the "GameplayAbility.Focus.Period" state */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	FGameplayTag DuringFocusPeriodTag;
@@ -302,6 +317,12 @@ protected: /* GameplayAbilitySystem */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	FGameplayTag InputBuffer_Jump_Tag;
 
+	/** 
+	* Called to add the default GameplayAbilities to the Player
+	*/
+	UFUNCTION()
+	void InitDefaultGameplayAbilities();
+	
 	/** 
 	* Event that is fired when BP should try to activate "GameplayAbility.Jump"
 	* @param bApplyInputBuffer: Whether to apply the GameplayEffect "coyote-time" to jump immeditely after GameplayAbility ends
@@ -396,6 +417,10 @@ protected: /* GameplayAbilitySystem */
 	void OnDeath(AActor* Killer, float DeathDamage);
 	
 public:
+	/** Networking **/
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool IsSupportedForNetworking() const override { return true; }
+	
 	/** Cameras **/
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return c_CameraBoom; }

@@ -5,7 +5,9 @@
 
 #include "FocusBase.h"
 #include "FocusfireCharacter.h"
+#include "FocusfireGameState.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AFocusPeriodSlowZone::AFocusPeriodSlowZone()
@@ -22,6 +24,21 @@ AFocusPeriodSlowZone::AFocusPeriodSlowZone()
 	c_SphereOfSlowEffect->SetHiddenInGame(false); // Set visible in game for debugging
 }
 
+void AFocusPeriodSlowZone::SetAndSlowSpawnerActor(AActor* SpawnActor)
+{
+	SpawnerActor = SpawnActor;
+
+	// Slow down the player that spawned this FocusPeriodSlowZone
+	if (AFocusfireCharacter* _focusfireCharacter = Cast<AFocusfireCharacter>(SpawnerActor))
+	{
+		if (not Set_IgnoreSlowdownActors.Contains(_focusfireCharacter))
+		{
+			FocusfireGameState->SetActorTimeDilationReplicated(_focusfireCharacter, StrengthOfTimeSlowdown);
+			Set_SlowdownActors.Add(_focusfireCharacter);
+		}
+	}
+}
+
 void AFocusPeriodSlowZone::SetActorSlowdownException(AActor* ActorToIgnore, bool bDoAddException)
 {
 	if (bDoAddException)
@@ -29,15 +46,15 @@ void AFocusPeriodSlowZone::SetActorSlowdownException(AActor* ActorToIgnore, bool
 		Set_IgnoreSlowdownActors.Add(ActorToIgnore);
 
 		// Being ignored, so make sure time dilation is set back to default
-		ActorToIgnore->CustomTimeDilation = 1.0;
+		FocusfireGameState->SetActorTimeDilationReplicated(ActorToIgnore, 1.0);
 		Set_SlowdownActors.Remove(ActorToIgnore);
 	}
 	else
 	{
 		Set_IgnoreSlowdownActors.Remove(ActorToIgnore);
 
-		// No longer being ignore, so slow down
-		ActorToIgnore->CustomTimeDilation = StrengthOfTimeSlowdown;
+		// No longer being ignored, so slow down
+		FocusfireGameState->SetActorTimeDilationReplicated(ActorToIgnore, StrengthOfTimeSlowdown);
 		Set_SlowdownActors.Add(ActorToIgnore);
 	}
 }
@@ -52,6 +69,10 @@ void AFocusPeriodSlowZone::BeginPlay()
 		c_SphereOfSlowEffect->OnComponentBeginOverlap.AddDynamic(this, &AFocusPeriodSlowZone::OnSlowZoneActorEntered);
 		c_SphereOfSlowEffect->OnComponentEndOverlap.AddDynamic(this, &AFocusPeriodSlowZone::OnSlowZoneActorExited);
 	}
+
+	// Get the GameState for helper method on setting time dilation
+	FocusfireGameState = GetWorld()->GetGameState<AFocusfireGameState>();
+	check(FocusfireGameState != nullptr); 
 }
 
 void AFocusPeriodSlowZone::OnSlowZoneActorEntered(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -63,19 +84,20 @@ void AFocusPeriodSlowZone::OnSlowZoneActorEntered(UPrimitiveComponent* Overlappe
 	if (AFocusBase* _focusBase = Cast<AFocusBase>(OtherActor))
 	{
 		_slowDownActor = _focusBase;
-		UE_LOG(LogTemp, Warning, TEXT("ccc Overlapped by AFocusBase"));
 	}
 	// Check if overlapped actor is a FocusfireCharacter
 	else if (AFocusfireCharacter* _focusfireCharacter = Cast<AFocusfireCharacter>(OtherActor))
 	{
-		_slowDownActor = _focusfireCharacter;
-		UE_LOG(LogTemp, Warning, TEXT("ccc Overlapped by AFocusfireCharacter"));
+		if (_focusfireCharacter == SpawnerActor) // Only slow down the player that spawned this FocusPeriodSlowZone
+		{
+			_slowDownActor = _focusfireCharacter;
+		}
 	}
 
 	// If AActor is one that can be slowed down by FocusPeriodZone, then add it to list
 	if (_slowDownActor)
 	{
-		_slowDownActor->CustomTimeDilation = StrengthOfTimeSlowdown;
+		FocusfireGameState->SetActorTimeDilationReplicated(_slowDownActor, StrengthOfTimeSlowdown);
 		Set_SlowdownActors.Add(_slowDownActor);
 	}
 }
@@ -86,7 +108,7 @@ void AFocusPeriodSlowZone::OnSlowZoneActorExited(UPrimitiveComponent* Overlapped
 	// If AActor was slowed down by FocusPeriodZone, then returns its time dilation back to normal
 	if (Set_SlowdownActors.Contains(OtherActor))
 	{
-		OtherActor->CustomTimeDilation = 1.0;
+		FocusfireGameState->SetActorTimeDilationReplicated(OtherActor, 1.0);
 		Set_SlowdownActors.Remove(OtherActor);
 	}
 }
@@ -97,7 +119,7 @@ void AFocusPeriodSlowZone::Destroyed()
 	for (AActor* _slowedActor : Set_SlowdownActors)
 	{
 		if (IsValid(_slowedActor))
-			_slowedActor->CustomTimeDilation = 1.0;
+			FocusfireGameState->SetActorTimeDilationReplicated(_slowedActor, 1.0);
 	}
 	
 	Super::Destroyed();

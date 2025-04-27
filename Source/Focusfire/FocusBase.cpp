@@ -19,6 +19,9 @@ AFocusBase::AFocusBase()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+	// Replicate FocusBase
+	bReplicates = true;
+	
 	// Create sphere collider
 	c_SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 	SetRootComponent(c_SphereComponent);
@@ -49,6 +52,9 @@ void AFocusBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Replicate FocusBase
+	SetReplicateMovement(true);
+	
 	// Create a timer that ticks down, when over, destroys this FocusBase
 	LifeInSecondsCurr = LifeInSecondsMax;
 	GetWorld()->GetTimerManager().SetTimer(LifeTimerHandle, this, &AFocusBase::TickLifetimeTimer,

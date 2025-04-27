@@ -27,11 +27,15 @@
 #include "UserWidget_FocusSelector.h"
 #include "UserWidget_PlayerHUD.h"
 #include "Blueprint/UserWidget.h"
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
 AFocusfireCharacter::AFocusfireCharacter()
 {
+	// Replicate Player
+	bReplicates = true;
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -92,6 +96,9 @@ AFocusfireCharacter::AFocusfireCharacter()
 	
 	// Create and initialize the AbilitySystemComponent
 	c_AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	c_AbilitySystemComponent->SetIsReplicated(true);
+	c_AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+	flag_GameplayAbilities_Initialized = false;
 
 	// Create an initialize AttributeSets
 	AttributeSet_HealthAttributeSet = CreateDefaultSubobject<UAttributeSetHealth>(TEXT("HealthAttributeSet"));
@@ -116,29 +123,32 @@ void AFocusfireCharacter::BeginPlay()
 			c_AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet_HealthAttributeSet->GetHealthAttribute()).AddUObject(this, &AFocusfireCharacter::HandleHealthChanged);
 		}
 	}
-
-	// Set up Focus Selector (radial menu)
-	if (FocusSelectorWidgetClass)
+	
+	// Set up HUD for local clients only
+	if (IsLocallyControlled())
 	{
-		FocusSelectorWidget = CreateWidget<UUserWidget_FocusSelector>(GetWorld(), FocusSelectorWidgetClass);
-
-		// Add all the types of FocusBase to the radial selector menu
-		for (TSubclassOf<AFocusBase> _focusType : EquippedFocuses)
+		if (FocusSelectorWidgetClass)
 		{
-			FocusSelectorWidget->AddTypeOfFocus(_focusType);
+			FocusSelectorWidget = CreateWidget<UUserWidget_FocusSelector>(GetWorld(), FocusSelectorWidgetClass);
+
+			// Add all the types of FocusBase to the radial selector menu
+			for (TSubclassOf<AFocusBase> _focusType : EquippedFocuses)
+			{
+				FocusSelectorWidget->AddTypeOfFocus(_focusType);
+			}
 		}
-	}
 
-	// Set up Player HUD
-	if (PlayerHUDClass)
-	{
-		PlayerHUDWidget = CreateWidget<UUserWidget_PlayerHUD>(GetWorld(), PlayerHUDClass);
-		PlayerHUDWidget->AddToViewport();
-		PlayerHUDWidget->initializePlayerHUD(this);
+		// Set up Player HUD
+		if (PlayerHUDClass)
+		{
+			PlayerHUDWidget = CreateWidget<UUserWidget_PlayerHUD>(GetWorld(), PlayerHUDClass);
+			PlayerHUDWidget->AddToViewport();
+			PlayerHUDWidget->initializePlayerHUD(this);
 
-		// Set starting FocusBase to shoot
-		const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
-		PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
+			// Set starting FocusBase to shoot
+			const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
+			PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
+		}
 	}
 }
 
@@ -155,6 +165,12 @@ void AFocusfireCharacter::Tick(float DeltaSeconds)
 	}
 }
 
+void AFocusfireCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AFocusfireCharacter, TypeOfFocusToShoot);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 void AFocusfireCharacter::NotifyControllerChanged()
@@ -168,6 +184,29 @@ void AFocusfireCharacter::NotifyControllerChanged()
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+	}
+}
+
+void AFocusfireCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// Initialize GAS on server
+	if (c_AbilitySystemComponent)
+	{
+		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		InitDefaultGameplayAbilities(); // Add default GameplayAbilties
+	}
+}
+
+void AFocusfireCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	// Initialize GAS on client
+	if (c_AbilitySystemComponent)
+	{
+		c_AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 }
 
@@ -213,6 +252,22 @@ void AFocusfireCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	else
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
+}
+
+void AFocusfireCharacter::InitDefaultGameplayAbilities()
+{
+	check(c_AbilitySystemComponent);
+
+	if (GetLocalRole() == ROLE_Authority and not flag_GameplayAbilities_Initialized)
+	{
+		// Give GameplayAbilties to Player, on Server
+		for (TSubclassOf<UGameplayAbility>& DefaultAbility : list_Default_GameplayAbilities)
+		{
+			c_AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(DefaultAbility));
+		}
+
+		flag_GameplayAbilities_Initialized = true;
 	}
 }
 
@@ -312,7 +367,8 @@ void AFocusfireCharacter::CancelLockedFocus(const FInputActionValue& Value)
 	OnInputFocusPeriodCancelLocked(); // Will signal BP to "input cancel" the "GameplayAbility.Focus.Period", which will re-slowdown the Player
 
 	// Modify HUD to display elements before locked focus
-	PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
+	if (IsValid(PlayerHUDWidget))
+		PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
 }
 
 void AFocusfireCharacter::DoSecondaryAction(const FInputActionValue& Value)
@@ -362,13 +418,14 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 			TSubclassOf<AFocusBase> _selectedFocus = FocusSelectorWidget->GetSelectedFocus();
 			if (_selectedFocus != nullptr)
 			{
-				TypeOfFocusToShoot = _selectedFocus;
+				RPC_UpdateTypeOfFocusToShoot(_selectedFocus);
 
 				// Reflect the currently selected FocusBase type on HUD
 				if (IsValid(PlayerHUDWidget))
 				{
 					const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
-					PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
+					if (IsValid(PlayerHUDWidget))
+						PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
 				}
 			}
 			
@@ -511,14 +568,16 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 		CurrentPingUnderCrosshair = _temp_PingUnderCrosshair;
 
 		// Change HUD
-		PlayerHUDWidget->ToggleShootToLockElements(CurrentPingUnderCrosshair != nullptr);
+		if (IsValid(PlayerHUDWidget))
+			PlayerHUDWidget->ToggleShootToLockElements(CurrentPingUnderCrosshair != nullptr);
     }
 	if (CurrentDashableToFocus != _temp_DashableToFocus) // Dash-able FocusBase
 	{
 		CurrentDashableToFocus = _temp_DashableToFocus;
 		
 		// Change HUD
-		PlayerHUDWidget->ToggleFocusDashHUDElements(CurrentDashableToFocus != nullptr);
+		if (IsValid(PlayerHUDWidget))
+			PlayerHUDWidget->ToggleFocusDashHUDElements(CurrentDashableToFocus != nullptr);
 	}
 
 	// Update Crosshair per tick
@@ -587,6 +646,11 @@ void AFocusfireCharacter::PivotAroundLockedFocus()
 	SetActorLocation(_nextPosition);
 }
 
+void AFocusfireCharacter::RPC_UpdateTypeOfFocusToShoot_Implementation(TSubclassOf<AFocusBase> NextTypeOfFocusToShoot)
+{
+	TypeOfFocusToShoot = NextTypeOfFocusToShoot;
+}
+
 void AFocusfireCharacter::OnGameplayAbilityStarted(UGameplayAbility* Ability)
 {
 	// Disable Player input on gameplay ability start
@@ -624,7 +688,8 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 		PivotAroundLockedFocus();
 
 		// Toggle HUD
-		PlayerHUDWidget->ToggleFocusLockedHUDElements(true);
+		if (IsValid(PlayerHUDWidget))
+			PlayerHUDWidget->ToggleFocusLockedHUDElements(true);
 
 		// BP handles activating "GameplayAbility.Focus.Period" right after
 		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
@@ -635,7 +700,8 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 		CurrentLockedOnFocus = nullptr; // Clear any FocusBase that was locked onto
 		
 		// Toggle HUD
-		PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
+		if (IsValid(PlayerHUDWidget))
+			PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
 		
 		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
 		UE_LOG(LogTemp, Warning, TEXT("ccc UN LOCK FOCUS"));
