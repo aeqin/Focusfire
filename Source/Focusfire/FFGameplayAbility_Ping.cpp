@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GameplayAbility_Ping.h"
+#include "FFGameplayAbility_Ping.h"
 
 #include "ActorComponent_ManagerFocus.h"
 #include "FocusfireCharacter.h"
@@ -10,12 +10,12 @@
 #include "Camera/CameraComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-void UGameplayAbility_Ping::SpawnProspectivePing()
+void UFFGameplayAbility_Ping::SpawnProspectivePing()
 {
 	OnTickRaycastForPingDistance();
 }
 
-void UGameplayAbility_Ping::OnTickRaycastForPingDistance()
+void UFFGameplayAbility_Ping::OnTickRaycastForPingDistance()
 {
 	AActor* _activator = CurrentActorInfo->AvatarActor.Get();
 	if (not _activator) return;
@@ -97,7 +97,7 @@ void UGameplayAbility_Ping::OnTickRaycastForPingDistance()
 	}
 }
 
-void UGameplayAbility_Ping::OnInputMovePingFurther()
+void UFFGameplayAbility_Ping::OnInputMovePingFurther()
 {
 	if (not IsValid(FollowCamera)) return;
 
@@ -115,7 +115,7 @@ void UGameplayAbility_Ping::OnInputMovePingFurther()
 	}
 }
 
-void UGameplayAbility_Ping::OnInputMovePingCloser()
+void UFFGameplayAbility_Ping::OnInputMovePingCloser()
 {
 	if (not IsValid(FollowCamera)) return;
 
@@ -133,7 +133,7 @@ void UGameplayAbility_Ping::OnInputMovePingCloser()
 	}
 }
 
-void UGameplayAbility_Ping::EndAbility(const FGameplayAbilitySpecHandle Handle,
+void UFFGameplayAbility_Ping::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {

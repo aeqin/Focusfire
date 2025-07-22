@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "GameplayAbility_FocusDash.h"
+#include "FFGameplayAbility_FocusDash.h"
 
 #include "FocusfireCharacter.h"
 
-AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
+AFocusBase* UFFGameplayAbility_FocusDash::DashToFocusInRange()
 {
 	DashToOffsetX = DefaultDashToOffsetX; // Reset offset
 	
@@ -19,14 +19,14 @@ AFocusBase* UGameplayAbility_FocusDash::DashToFocusInRange()
 		// Set the offset as decreed by the FocusfireCharacter
 		DashToOffsetX = _player->GetRangeOfFocusAbilityUseable() - 1.0f;
 
-		UE_LOG(LogTemp, Display, TEXT("ccc DashToFocusInRange"));
+		UE_LOG(LogTemp, Display, TEXT("DebugText DashToFocusInRange"));
 		return _player->GetCurrentDashableToFocus();
 	}
 
 	return nullptr;
 }
 
-bool UGameplayAbility_FocusDash::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+bool UFFGameplayAbility_FocusDash::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {

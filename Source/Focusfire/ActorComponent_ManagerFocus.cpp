@@ -4,11 +4,16 @@
 #include "ActorComponent_ManagerFocus.h"
 
 #include "BlueprintFunctionLib_FocusUtils.h"
+#include "FFConstants_Struct.h"
 #include "FocusBase.h"
+#include "FocusBaseLaunch.h"
+#include "FocusBaseMeteor.h"
+#include "FocusBaseRebound.h"
 #include "PingSphere.h"
 #include "UserWidget_FocusMarker.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/CanvasPanelSlot.h"
+#include "DynamicMesh/DynamicMesh3.h"
 #include "Kismet/GameplayStatics.h"
 
 void UActorComponent_ManagerFocus::OnTickPositionOffscreenIndicators()
@@ -215,11 +220,11 @@ APingSphere* UActorComponent_ManagerFocus::SpawnPing(FTransform SpawnTransform, 
 	return _spawnedPing;
 }
 
-FLinearColor UActorComponent_ManagerFocus::GetFocusColor(TSubclassOf<AFocusBase> FocusType)
+FLinearColor UActorComponent_ManagerFocus::GetFocusColor(EFocusType FocusType)
 {
-	if (Map_Focusclass_Color.Contains(FocusType))
+	if (Map_FocusType_Color.Contains(FocusType))
 	{
-		return Map_Focusclass_Color[FocusType];
+		return Map_FocusType_Color[FocusType];
 	}
 	else
 	{
@@ -227,14 +232,27 @@ FLinearColor UActorComponent_ManagerFocus::GetFocusColor(TSubclassOf<AFocusBase>
 	}
 }
 
-FString UActorComponent_ManagerFocus::GetFocusString(TSubclassOf<AFocusBase> FocusType)
+FString UActorComponent_ManagerFocus::GetFocusString(EFocusType FocusType)
 {
-	if (Map_Focusclass_String.Contains(FocusType))
+	if (Map_FocusType_String.Contains(FocusType))
 	{
-		return Map_Focusclass_String[FocusType];
+		return Map_FocusType_String[FocusType];
 	}
 	else
 	{
-		return FString::Printf(TEXT("Error: There is no String name mapped to this FocusBase class [%s]"), *FocusType->GetName());
+		return FString::Printf(TEXT("Error: There is no String name mapped to this EFocusType [%s]"), *UEnum::GetValueAsString(FocusType));
+	}
+}
+
+TSubclassOf<AFocusBase> UActorComponent_ManagerFocus::GetFocusClass(EFocusType FocusType)
+{
+	if (Map_FocusType_FocusClass.Contains(FocusType))
+	{
+		return Map_FocusType_FocusClass[FocusType];
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("ManagerFocus ERROR: Attempted to get a focus class for [%s], which isn't mapped"), *UEnum::GetValueAsString(FocusType));
+		return AFocusBase::StaticClass();
 	}
 }

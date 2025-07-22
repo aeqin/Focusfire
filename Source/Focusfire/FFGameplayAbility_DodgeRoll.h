@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_DodgeRoll.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_DodgeRoll.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_DodgeRoll : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_DodgeRoll : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 	

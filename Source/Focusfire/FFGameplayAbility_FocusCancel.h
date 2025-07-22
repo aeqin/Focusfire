@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_FocusCancel.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_FocusCancel.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_FocusCancel : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_FocusCancel : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 	

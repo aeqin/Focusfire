@@ -6,11 +6,13 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "AbilitySystemInterface.h"
+#include "FFConstants_Struct.h"
 #include "FocusBase.h"
 #include "GameplayTagContainer.h"
 #include "GameplayEffectTypes.h"
 #include "FocusfireCharacter.generated.h"
 
+class UFFGameplayAbility;
 class APingSphere;
 class UUserWidget_PlayerHUD;
 class UUserWidget_FocusSelector;
@@ -179,10 +181,17 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
 	FVector FirstPersonPOVCameraOffset;
 
+	/** 
+	* Event that is fired when BP should try to print a debug string
+	* @param DebugString: What string to print
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void DisplayDebugString(const FString& DebugString);
+
 protected: /* Switching camera POV */
 	/** 
 	* Based on the POV of the CurrentCamera, lerp the in-between position
-	* @param Alpha: The current lerp progress. Ideally from the SwitchCameraTimeline in BP_FocusfireCharacter
+
 	* @return The in-progress lerped position of the CurrentCamera each frame
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
@@ -263,19 +272,17 @@ protected: /* Player HUD */
 	UUserWidget_PlayerHUD* PlayerHUDWidget;
 	
 protected: /* Shooting FocusBase */
-	/** Currently selected FocusBase that will be shot */
-	UPROPERTY(Replicated, EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
-	TSubclassOf<AFocusBase> TypeOfFocusToShoot = AFocusBase::StaticClass();
+	/** Currently selected type of FocusBase that will be shot */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
+	EFocusType CurrentTypeOfFocusToShoot = EFocusType::INVALID;
 
-	/** RPC to request the Server to replicate the value of the TypeOfFocusToShoot variable
-	 * @param NextTypeOfFocusToShoot: The new type of focus of shoot, to be replicated
-	 */
-	UFUNCTION(Server, Reliable, Category = "FocusfireCharacter")
-	void RPC_UpdateTypeOfFocusToShoot(TSubclassOf<AFocusBase> NextTypeOfFocusToShoot);
-
+	/** Current direction of facing camera */
+	UPROPERTY(BlueprintReadOnly, Category = "FocusfireCharacter")
+	FVector CurrentCameraDirection;
+	
 	/** List of all possible FocusBase equipped to Player */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
-	TArray<TSubclassOf<AFocusBase>> EquippedFocuses;
+	TArray<EFocusType> List_EquippedFocusType;
 
 	/** The BP class of the radial menu that allows Player to select the current FocusBase to shoot */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
@@ -294,6 +301,10 @@ protected: /* GameplayAbilitySystem */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusfireCharacter")
 	TArray<TSubclassOf<UGameplayAbility>> list_Default_GameplayAbilities;
 
+	/** A map that maps Gameplaytag to FFGameplayAbility (will be added to by BP) **/
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "FocusfireCharacter")
+	TMap<FGameplayTag, UFFGameplayAbility*> map_GameplayTag_FFGameplayAbility;
+	
 	UPROPERTY()
 	bool flag_GameplayAbilities_Initialized;
 	
@@ -340,7 +351,7 @@ protected: /* GameplayAbilitySystem */
 	* Event that is fired when BP should try to activate "GameplayAbility.Focus.Shoot"
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
-	void OnInputFocusShoot();
+	void OnInputFocusShoot(FFStruct_FocusData FocusShootData);
 
 	/** 
 	* Event that is fired when BP should try to activate the custom "GameplayAbility" of the locked on FocusBase
@@ -372,6 +383,18 @@ protected: /* GameplayAbilitySystem */
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
 	void OnInputDodgeRoll();
+
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.FocusHop"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputFocusHop();
+	
+	/** 
+	* Event that is fired when BP should try to activate "GameplayAbility.Mantle"
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusfireCharacter")
+	void OnInputMantle();
 	
 	/** 
 	* Function that is called when OnAbilityEnded event is fired from AbilitySystemComponent
@@ -418,8 +441,8 @@ protected: /* GameplayAbilitySystem */
 	
 public:
 	/** Networking **/
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual bool IsSupportedForNetworking() const override { return true; }
+	//virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	//virtual bool IsSupportedForNetworking() const override { return true; }
 	
 	/** Cameras **/
 	/** Returns CameraBoom subobject **/
@@ -433,7 +456,7 @@ public:
 	/** Returns whether Player is currently in first-person camera POV **/
 	UFUNCTION(BlueprintPure, Category = "FocusfireCharacter")
 	FORCEINLINE bool GetCameraIsCurrentlyFirstPersonPOV() const { return CurrentCamera == c_FirstPOVCamera; }
-
+	
 	/** Returns The Ability System Component **/
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return c_AbilitySystemComponent; }
 
@@ -447,10 +470,11 @@ public:
 	FORCEINLINE APingSphere* GetCurrentPingUnderCrosshair() const { return CurrentPingUnderCrosshair; }
 
 	/** Returns The arrow component of where to spawn FocusBase **/
+	UFUNCTION(BlueprintCallable, Category = "FocusfireCharacter")
 	FORCEINLINE UArrowComponent* GetFocusSpawnArrow() const { return c_FocusShootArrow; }
 	
 	/** Returns The current focus to spawn (to shoot) **/
-	FORCEINLINE TSubclassOf<AFocusBase> GetCurrentFocusToShoot() const { return TypeOfFocusToShoot; }
+	FORCEINLINE EFocusType GetCurrentFocusTypeToShoot() const { return CurrentTypeOfFocusToShoot; }
 
 	/** Returns the range at which a FocusBase's ability is use-able **/
 	FORCEINLINE float GetRangeOfFocusAbilityUseable() const { return RangeOfFocusAbilityUseable; }

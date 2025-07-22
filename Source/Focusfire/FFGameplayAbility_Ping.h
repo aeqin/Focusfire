@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_Ping.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_Ping.generated.h"
 
 class UCameraComponent;
 class APingSphere;
@@ -12,7 +12,7 @@ class APingSphere;
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_Ping : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_Ping : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 

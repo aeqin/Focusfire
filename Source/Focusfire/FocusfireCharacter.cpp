@@ -1,6 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "FocusfireCharacter.h"
+
+#include <string>
+
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -14,12 +17,16 @@
 #include "AbilitySystemComponent.h"
 #include "ActorComponent_ManagerFocus.h"
 #include "AttributeSetHealth.h"
+#include "FFConstants_Struct.h"
 #include "FocusBase.h"
 #include "FocusfireGameState.h"
-#include "GameplayAbility_DodgeRoll.h"
-#include "GameplayAbility_FocusDash.h"
-#include "GameplayAbility_FocusPeriod.h"
-#include "GameplayAbility_FocusShoot.h"
+#include "FFGameplayAbility_DodgeRoll.h"
+#include "FFGameplayAbility_FocusDash.h"
+#include "FFGameplayAbility_FocusPeriod.h"
+#include "FFGameplayAbility_FocusShoot.h"
+#include "FocusBaseLaunch.h"
+#include "FocusBaseMeteor.h"
+#include "FocusBaseRebound.h"
 #include "GameplayEffectExtension.h"
 #include "GameplayTagsManager.h"
 #include "KismetTraceUtils.h"
@@ -132,9 +139,9 @@ void AFocusfireCharacter::BeginPlay()
 			FocusSelectorWidget = CreateWidget<UUserWidget_FocusSelector>(GetWorld(), FocusSelectorWidgetClass);
 
 			// Add all the types of FocusBase to the radial selector menu
-			for (TSubclassOf<AFocusBase> _focusType : EquippedFocuses)
+			for (EFocusType _focusType : List_EquippedFocusType)
 			{
-				FocusSelectorWidget->AddTypeOfFocus(_focusType);
+				FocusSelectorWidget->AddFocusTypeToMenu(_focusType);
 			}
 		}
 
@@ -146,7 +153,7 @@ void AFocusfireCharacter::BeginPlay()
 			PlayerHUDWidget->initializePlayerHUD(this);
 
 			// Set starting FocusBase to shoot
-			const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
+			const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(CurrentTypeOfFocusToShoot);
 			PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
 		}
 	}
@@ -163,12 +170,6 @@ void AFocusfireCharacter::Tick(float DeltaSeconds)
 	{
 		AFocusfireCharacter::PivotAroundLockedFocus();
 	}
-}
-
-void AFocusfireCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AFocusfireCharacter, TypeOfFocusToShoot);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -303,6 +304,20 @@ void AFocusfireCharacter::Move(const FInputActionValue& Value)
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
+		// Attempt to mantle. If it succeeds, then it adds the disable movement input tag, and we shouldn't move,
+		// otherwise move normally
+		OnInputMantle();
+		// Do nothing if Player has tag to disable movement input
+		if (c_AbilitySystemComponent->HasMatchingGameplayTag(DisableMovementInputTag))
+		{
+			return;
+		}
+		// const float _dot = FVector::DotProduct(ForwardDirection + RightDirection, GetActorForwardVector());
+		// GEngine->AddOnScreenDebugMessage(-1, 0.0, FColor::Red, "ForwardDirection" + ForwardDirection.ToString());
+		// GEngine->AddOnScreenDebugMessage(-1, 0.0, FColor::Red, "RightDirection" + RightDirection.ToString());
+		// GEngine->AddOnScreenDebugMessage(-1, 0.0, FColor::Red, "facing" + GetActorForwardVector().ToString());
+		// GEngine->AddOnScreenDebugMessage(-1, 0.0, FColor::Red, "MovementVector" + MovementVector.ToString());
+		
 		// add movement 
 		AddMovementInput(ForwardDirection, MovementVector.Y);
 		AddMovementInput(RightDirection, MovementVector.X);
@@ -333,7 +348,7 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 	if (CurrentLockedOnFocus != nullptr && CurrentLockedOnFocus == CurrentDashableToFocus)
 	{
 		OnInputFocusBaseActivateAbility(CurrentLockedOnFocus);
-		UE_LOG(LogTemp, Warning, TEXT("ccc Use FocusBase.GameplayAbility"));
+		UE_LOG(LogTemp, Warning, TEXT("DebugText Use FocusBase.GameplayAbility"));
 		return;
 	}
 
@@ -341,15 +356,14 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 	if (CurrentDashableToFocus != nullptr)
 	{
 		OnInputFocusDash();
-		UE_LOG(LogTemp, Warning, TEXT("ccc Use GameplayAbility.Focus.Dash"));
+		UE_LOG(LogTemp, Warning, TEXT("DebugText Use GameplayAbility.Focus.Dash"));
 		return;
 	}
 
 	// Use "GameplayAbility.Focus.Shoot" to shoot out the currently selected FocusBase in viewing direction (nothing under crosshair)
 	if (CurrentDashableToFocus == nullptr)
 	{
-		OnInputFocusShoot();
-		UE_LOG(LogTemp, Warning, TEXT("ccc Use GameplayAbility.Focus.Shoot"));
+		OnInputFocusShoot(FFStruct_FocusData(GetFocusSpawnArrow()->GetComponentLocation(), CurrentCameraDirection, CurrentTypeOfFocusToShoot));
 		return;
 	}
 }
@@ -415,15 +429,15 @@ void AFocusfireCharacter::ToggleFocusSelector(const FInputActionValue& Value)
 		if (FocusSelectorWidget->IsInViewport())
 		{
 			// Set the current FocusBase to shoot, only if properly selected
-			TSubclassOf<AFocusBase> _selectedFocus = FocusSelectorWidget->GetSelectedFocus();
-			if (_selectedFocus != nullptr)
+			EFocusType _selectedFocus = FocusSelectorWidget->GetCurrentSelectedFocusType();
+			if (_selectedFocus != EFocusType::INVALID)
 			{
-				RPC_UpdateTypeOfFocusToShoot(_selectedFocus);
+				CurrentTypeOfFocusToShoot = _selectedFocus;
 
 				// Reflect the currently selected FocusBase type on HUD
 				if (IsValid(PlayerHUDWidget))
 				{
-					const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(TypeOfFocusToShoot);
+					const FString _FocusName = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus()->GetFocusString(CurrentTypeOfFocusToShoot);
 					if (IsValid(PlayerHUDWidget))
 						PlayerHUDWidget->OnCurrentlySelectedFocusChanged(_FocusName);
 				}
@@ -477,8 +491,15 @@ void AFocusfireCharacter::Dodge(const FInputActionValue& Value)
 	{
 		return;
 	}
-	
-	OnInputDodgeRoll(); // Signal BP
+
+	if (GetCharacterMovement()->IsMovingOnGround())
+	{
+		OnInputDodgeRoll(); // Signal BP
+	}
+	else
+	{
+		OnInputFocusHop(); // Signal BP
+	}
 }
 
 void AFocusfireCharacter::Sprint(const FInputActionValue& Value)
@@ -586,8 +607,12 @@ void AFocusfireCharacter::OnTickRaycastForDashableToFocus()
 
 AActor* AFocusfireCharacter::RaycastForFocusOrPing(bool bQueryFocusOnly)
 {
+	// Store current camera direction each frame
+	CurrentCameraDirection = GetCurrentCamera()->GetForwardVector();
+
+	// Raycast for FocusBase or PingSphere
 	const FVector _TraceStart = GetCurrentCamera()->GetComponentLocation();
-	const FVector _TraceEnd = _TraceStart + GetCurrentCamera()->GetForwardVector() * RangeOfDashableToFocusRaycast * 2;
+	const FVector _TraceEnd = _TraceStart + CurrentCameraDirection * RangeOfDashableToFocusRaycast * 2;
 	const TArray<AActor*> _ActorsToIgnore = {GetOwner()};
 	const FColor _ColorBeforeHit = FColor::Green;
 	const FColor _ColorAfterHit = FColor::Red;
@@ -646,11 +671,6 @@ void AFocusfireCharacter::PivotAroundLockedFocus()
 	SetActorLocation(_nextPosition);
 }
 
-void AFocusfireCharacter::RPC_UpdateTypeOfFocusToShoot_Implementation(TSubclassOf<AFocusBase> NextTypeOfFocusToShoot)
-{
-	TypeOfFocusToShoot = NextTypeOfFocusToShoot;
-}
-
 void AFocusfireCharacter::OnGameplayAbilityStarted(UGameplayAbility* Ability)
 {
 	// Disable Player input on gameplay ability start
@@ -674,13 +694,13 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 	if (c_AbilitySystemComponent->HasMatchingGameplayTag(InputBuffer_Jump_Tag))
 	{
 		// Immediately jump after "GameplayAbility.DodgeRoll"
-		if (UGameplayAbility_DodgeRoll* _endedDodgeRoll = Cast<UGameplayAbility_DodgeRoll>(AbilityEndedData.AbilityThatEnded))
+		if (UFFGameplayAbility_DodgeRoll* _endedDodgeRoll = Cast<UFFGameplayAbility_DodgeRoll>(AbilityEndedData.AbilityThatEnded))
 		{
 			OnInputJump(false);
 		}
 	}
 	
-	if (UGameplayAbility_FocusDash* _endedDash = Cast<UGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
+	if (UFFGameplayAbility_FocusDash* _endedDash = Cast<UFFGameplayAbility_FocusDash>(AbilityEndedData.AbilityThatEnded))
 	{
 		// Lock on to the FocusBase that was just dashed to (allows use of its ability)
 		CurrentLockedOnFocus = CurrentDashableToFocus;
@@ -693,9 +713,9 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 
 		// BP handles activating "GameplayAbility.Focus.Period" right after
 		OnFocusDashEnded(AbilityEndedData.bWasCancelled);
-		UE_LOG(LogTemp, Warning, TEXT("ccc LOCK FOCUS"));
+		UE_LOG(LogTemp, Warning, TEXT("DebugText LOCK FOCUS"));
 	}
-	else if (UGameplayAbility_FocusPeriod* _endedPeriod = Cast<UGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))
+	else if (UFFGameplayAbility_FocusPeriod* _endedPeriod = Cast<UFFGameplayAbility_FocusPeriod>(AbilityEndedData.AbilityThatEnded))
 	{
 		CurrentLockedOnFocus = nullptr; // Clear any FocusBase that was locked onto
 		
@@ -704,7 +724,7 @@ void AFocusfireCharacter::OnGameplayAbilityEnded(const FAbilityEndedData& Abilit
 			PlayerHUDWidget->ToggleFocusLockedHUDElements(false);
 		
 		OnFocusPeriodEnded(AbilityEndedData.bWasCancelled);
-		UE_LOG(LogTemp, Warning, TEXT("ccc UN LOCK FOCUS"));
+		UE_LOG(LogTemp, Warning, TEXT("DebugText UN LOCK FOCUS"));
 	}
 }
 

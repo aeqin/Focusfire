@@ -28,12 +28,11 @@ bool UUserWidget_FocusSelector::CalcCurrentRadialAngle(float& radialAngle, float
 	return true;
 }
 
-void UUserWidget_FocusSelector::AddTypeOfFocus(TSubclassOf<AFocusBase> FocusType)
+void UUserWidget_FocusSelector::AddFocusTypeToMenu(EFocusType FocusType)
 {
-	if (not FocusSelections.Contains(FocusType))
+	if (not List_SelectableFocuses.Contains(FocusType))
 	{
-		FocusSelections.Add(FocusType);
-		OnNewFocusSliceAdded(FocusType); // Signal BP to modify the dynamic material that draws the radial menu
-		UE_LOG(LogTemp, Display, TEXT("ccc Add TypeOfFocus"));
+		List_SelectableFocuses.Add(FocusType);
+		OnNewFocusTypeSliceAdded(FocusType); // Signal BP to modify the dynamic material that draws the radial menu
 	}
 }

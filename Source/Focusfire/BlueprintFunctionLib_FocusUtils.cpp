@@ -3,7 +3,9 @@
 
 #include "BlueprintFunctionLib_FocusUtils.h"
 
+#include "FFGameplayAbilityTargetData_FocusData.h"
 #include "FocusfireCharacter.h"
+#include "FocusfireGameState.h"
 #include "Camera/CameraComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -162,5 +164,61 @@ bool UBlueprintFunctionLib_FocusUtils::GetIntersectionFromTwoLineSegments(const 
 	{
 		return false;
 	}
+}
+
+FGameplayAbilityTargetDataHandle UBlueprintFunctionLib_FocusUtils::CreateTargetData_FocusData(
+	const FVector SpawnLocation, const FVector SpawnDirection, const EFocusType SpawnType)
+{
+	// Create our target data type, 
+	// Handle's automatically cleanup and delete this data when the handle is destructed, 
+	// if you don't add this to a handle then be careful because this deals with memory management and memory leaks so its safe to just always add it to a handle at some point in the frame!
+	FFGameplayAbilityTargetData_FocusData* _FocusData = new FFGameplayAbilityTargetData_FocusData();
+	
+	// Setup the struct's information to use the inputted name and any other changes we may want to do
+	_FocusData->FocusData = FFStruct_FocusData(SpawnLocation, SpawnDirection, SpawnType);
+	
+	// Make our handle wrapper for Blueprint usage
+	FGameplayAbilityTargetDataHandle Handle;
+	// Add the target data to our handle
+	Handle.Add(_FocusData);
+	// Output our handle to Blueprint
+	return Handle;
+}
+
+FString UBlueprintFunctionLib_FocusUtils::GetStringFromFocusData(const FFStruct_FocusData FocusData)
+{
+	if (FocusData.IsValidStruct())
+	{
+		return FString::Printf(TEXT("SpawnLocation: [%s]\nSpawnDirection: [%s]\nSpawnType: [%s]"), *FocusData.SpawnLocation.ToString(), *FocusData.SpawnLocation.ToString(), *UEnum::GetValueAsString(FocusData.FocusType));
+	}
+	else
+	{
+		return TEXT("FocusData ERROR: Attempting to print uninitialized FocusData");
+	}
+}
+
+FFStruct_FocusData UBlueprintFunctionLib_FocusUtils::GetFocusDataFromTargetDataHandle(
+	const FGameplayAbilityTargetDataHandle& Handle, const int Index)
+{
+	if (Handle.Data.IsValidIndex(Index))
+	{
+		// Check data at index is valid
+		FGameplayAbilityTargetData* _Data = Handle.Data[Index].Get();
+		if(_Data == nullptr)
+		{
+			return FFStruct_FocusData();
+		}
+
+		// This is basically the type checking pass, static_cast does not have type safety, this is why we do this check.
+		// If we don't do this then it will object slice the struct and thus we have no way of making sure its that type.
+		if(_Data->GetScriptStruct() == FFGameplayAbilityTargetData_FocusData::StaticStruct())
+		{
+			// Here is when you would do the cast because we know its the correct type already
+			FFGameplayAbilityTargetData_FocusData* _FocusData = static_cast<FFGameplayAbilityTargetData_FocusData*>(_Data);
+			return FFStruct_FocusData(_FocusData->FocusData.SpawnLocation, _FocusData->FocusData.SpawnDirection, _FocusData->FocusData.FocusType);
+		}
+	}
+	
+	return FFStruct_FocusData();
 }
 

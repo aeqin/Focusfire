@@ -3,15 +3,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_FocusMeteor.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_FocusMeteor.generated.h"
 
 class UNiagaraSystem;
 /**
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_FocusMeteor : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_FocusMeteor : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 

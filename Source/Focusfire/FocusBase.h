@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "FocusBase.generated.h"
 
+enum class EFocusType : uint8;
 class UWidgetComponent;
 class UUserWidget_FocusMarker;
 class UProjectileMovementComponent;
@@ -28,6 +29,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	/** The type of FocusBase this is */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase")
+	EFocusType FocusType;
+
+	/** @return The type of Focus this FocusBase is */
+	FORCEINLINE EFocusType GetFocusType() const { return FocusType; }
+	
 	/** Sphere collision */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USphereComponent> c_SphereComponent;
@@ -149,6 +157,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
 	virtual void ActivateAbility(const AActor* Activator);
 
+	/** 
+	* Override to remove jitter on replicated projectile movement
+	*/
+	virtual void PostNetReceiveLocationAndRotation() override;
+
+	/** 
+	* Event that is fired when BP should try to print a debug string
+	* @param DebugString: What string to print
+	*/
+	UFUNCTION(BlueprintImplementableEvent, Category = "FocusBase")
+	void DisplayDebugString(const FString& DebugString);
+	
 public:
 	/** Getters */
 	

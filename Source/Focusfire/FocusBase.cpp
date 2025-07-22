@@ -93,12 +93,19 @@ void AFocusBase::TickLifetimeTimer()
 
 void AFocusBase::ActivateAbility(const AActor* Activator)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ccc [%s] Activating %s Ability"), *Activator->GetName(), *GetName());
+	UE_LOG(LogTemp, Warning, TEXT("DebugText [%s] Activating %s Ability"), *Activator->GetName(), *GetName());
 	// Override in children
 }
 
+void AFocusBase::PostNetReceiveLocationAndRotation()
+{
+	const FRepMovement& LocalRepMovement = GetReplicatedMovement();
+	FVector NewLocation = FRepMovement::RebaseOntoLocalOrigin(LocalRepMovement.Location, this);
+	c_ProjectileMovementComponent->MoveInterpolationTarget(NewLocation, LocalRepMovement.Rotation);
+}
+
 void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+                                         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// Do NOT be destroyed if overlapping a FocusPeriodSlowZone
 	if (AFocusPeriodSlowZone* _slowTrigger = Cast<AFocusPeriodSlowZone>(OtherActor))
@@ -118,7 +125,8 @@ void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponen
 		UNiagaraComponent* _hitParticles = UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, NiagaraSystem_HitVFX, GetActorLocation(), SweepResult.ImpactNormal.Rotation());
 		_hitParticles->AddRelativeRotation(FRotator(90, 0, 0));
 	}
-	
+
+	GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Red, "Destroyed by " + OtherActor->GetName());
 	Destroy();
 }
 
@@ -133,7 +141,7 @@ void AFocusBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (flag_MovingToLockInPlace)
+	if (flag_MovingToLockInPlace and HasAuthority())
 	{
 		FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
 		FVector _Direction_CurrentVelocity = c_ProjectileMovementComponent->Velocity.GetSafeNormal();
@@ -143,12 +151,14 @@ void AFocusBase::Tick(float DeltaTime)
 			LockInPlace(true);
 			flag_MovingToLockInPlace = false;
 		}
+		DisplayDebugString("DebugText tick in focus base");
 	}
 }
 
 void AFocusBase::ShootInDirection(const FVector Direction)
 {
 	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
+	DisplayDebugString("DebugText shoot in direction");
 }
 
 void AFocusBase::ShootToLocation(const FVector LockPlace)
@@ -157,6 +167,7 @@ void AFocusBase::ShootToLocation(const FVector LockPlace)
 	flag_MovingToLockInPlace = true;
 	FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
 	c_ProjectileMovementComponent->Velocity = _Direction_LockLocation * ShootSpeed;
+	DisplayDebugString("DebugText shoot to location");
 }
 
 void AFocusBase::LockInPlace(bool bResetLifetime)

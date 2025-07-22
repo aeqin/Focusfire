@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_FocusPeriod.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_FocusPeriod.generated.h"
 
 class AFocusfireCharacter;
 class AFocusPeriodSlowZone;
@@ -12,12 +12,12 @@ class AFocusPeriodSlowZone;
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_FocusPeriod : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_FocusPeriod : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	UGameplayAbility_FocusPeriod();
+	UFFGameplayAbility_FocusPeriod();
 
 protected:
 	/** The AFocusfireCharacter that activated this ability */

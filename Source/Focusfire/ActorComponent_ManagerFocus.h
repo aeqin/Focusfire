@@ -7,6 +7,7 @@
 #include "ActorComponent_ManagerFocus.generated.h"
 
 
+enum class EFocusType : uint8;
 class APingSphere;
 class UWidgetComponent;
 class UUserWidget_FocusMarker;
@@ -52,13 +53,17 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 	UFUNCTION()
 	void OnPingDestroyed(AActor* DestroyedActor);
 
-	/** A map of FocusBaseType Class to Color that best represents it */
+	/** A map of focus type to Color that best represents it */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
-	TMap<TSubclassOf<AFocusBase>, FLinearColor> Map_Focusclass_Color;
+	TMap<EFocusType, FLinearColor> Map_FocusType_Color;
 
-	/** A map of FocusBaseType Class to String that best represents its name */
+	/** A map of focus type to String that best represents it */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
-	TMap<TSubclassOf<AFocusBase>, FString> Map_Focusclass_String;
+	TMap<EFocusType, FString> Map_FocusType_String;
+
+	/** A map of focus type to Class that best represents it (actor class that would be spawned) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TMap<EFocusType, TSubclassOf<AFocusBase>> Map_FocusType_FocusClass;
 	
 public:	
 	// Sets default values for this component's properties
@@ -103,15 +108,22 @@ public:
 	
 	/**
 	 * Get the color that best represents the Focus
-	 * @param FocusType: The class type of the focus to check
+	 * @param FocusType: The type of the focus to check
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
-	FLinearColor GetFocusColor(TSubclassOf<AFocusBase> FocusType);
-
+	FLinearColor GetFocusColor(EFocusType FocusType);
+	
 	/**
 	 * Get the String that best represents the Focus
-	 * @param FocusType: The class type of the focus to check
+	 * @param FocusType: The type of the focus to check
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
-	FString GetFocusString(TSubclassOf<AFocusBase> FocusType);
+	FString GetFocusString(EFocusType FocusType);
+
+	/**
+	 * Get the FocusBase child class that best represents the focus type
+	 * @param FocusType: The type of the focus to check
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
+	TSubclassOf<AFocusBase> GetFocusClass(EFocusType FocusType);
 };

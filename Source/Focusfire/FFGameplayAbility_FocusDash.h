@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "GameplayAbility_FocusDash.generated.h"
+#include "FFGameplayAbility.h"
+#include "FFGameplayAbility_FocusDash.generated.h"
 
 class AFocusBase;
 
@@ -12,7 +12,7 @@ class AFocusBase;
  * 
  */
 UCLASS()
-class FOCUSFIRE_API UGameplayAbility_FocusDash : public UGameplayAbility
+class FOCUSFIRE_API UFFGameplayAbility_FocusDash : public UFFGameplayAbility
 {
 	GENERATED_BODY()
 

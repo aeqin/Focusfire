@@ -73,7 +73,7 @@ void UUserWidget_PlayerHUD::AddTextToTextLayoutWidgetByReason(UTextBlock* TextWi
 		{
 			_reasons.Emplace(_reason_to_text.Key);
 		}
-		UE_LOG(LogTemp, Warning, TEXT("ccc * %s"), *_text_to_stack.Key->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("DebugText * %s"), *_text_to_stack.Key->GetName());
 		for (ETextReason _reason : _reasons) {
 			UE_LOG(LogTemp, Warning, TEXT("* %s"), *UEnum::GetValueAsString(_reason));
 		}

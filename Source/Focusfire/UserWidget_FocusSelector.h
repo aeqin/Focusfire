@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FFConstants_Struct.h"
 #include "Blueprint/UserWidget.h"
 #include "FocusBase.h"
 #include "UserWidget_FocusSelector.generated.h"
@@ -36,6 +37,14 @@ class FOCUSFIRE_API UUserWidget_FocusSelector : public UUserWidget
 	UPROPERTY(BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
 	TArray<TSubclassOf<AFocusBase>> FocusSelections;
 
+	/** The possible FocusBase selection slices **/
+	UPROPERTY(BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
+	TArray<EFocusType> List_SelectableFocuses;
+
+	/** The selected FocusBase (right before closing the menu) **/
+	UPROPERTY(BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
+	EFocusType CurrentSelectedFocusType = EFocusType::INVALID;
+	
 	/** The selected FocusBase (right before closing the menu) **/
 	UPROPERTY(BlueprintReadWrite, Category = "FocusSelector", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<AFocusBase> CurrentlySelectedShoot = nullptr;
@@ -53,19 +62,19 @@ public:
 	 * @return The type of FocusBase that was last selected by the radial menu
 	 */
 	UFUNCTION(BlueprintPure, Category = "FocusSelector")
-	FORCEINLINE TSubclassOf<AFocusBase> GetSelectedFocus() const { return CurrentlySelectedShoot; }
+	FORCEINLINE EFocusType GetCurrentSelectedFocusType() const { return CurrentSelectedFocusType; }
 
 	/**
 	 * Adds a new slice (representing a FocusBase) to the radial menu
 	 * @param FocusType: The type of FocusBase to be added on the radial menu
 	 */
 	UFUNCTION(BlueprintCallable, Category = "FocusSelector")
-	void AddTypeOfFocus(TSubclassOf<AFocusBase> FocusType);
-	
+	void AddFocusTypeToMenu(EFocusType FocusType);
+
 	/** 
 	* Event that is fired when a new slice is added to the radial menu
 	* @param FocusType: The type of FocusBase to be added on the radial menu
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusSelector")
-	void OnNewFocusSliceAdded(TSubclassOf<AFocusBase> FocusType);
+	void OnNewFocusTypeSliceAdded(EFocusType FocusType);
 };
