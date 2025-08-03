@@ -61,25 +61,30 @@ struct FFStruct_FocusData : public FFStruct
 public:
 	// Constructor
 	FFStruct_FocusData(){}
-	FFStruct_FocusData(const FVector& SpawnLocation, const FVector& SpawnDirection, const EFocusType& SpawnType)
+	FFStruct_FocusData(const FVector& SpawnLocation, const EFocusType& SpawnType, const EFocusDirective& SpawnDirective = EFocusDirective::DEFAULT, const FVector& SpawnAfterVector = FVector::ZeroVector)
 	{
 		this->SpawnLocation = SpawnLocation;
-		this->SpawnDirection = SpawnDirection;
 		this->FocusType = SpawnType;
+		this->SpawnDirective = SpawnDirective;
+		this->SpawnAfterVector = SpawnAfterVector;
 		this->bIsValid = true;
 	}
 
 	// Spawn location of FocusBase
 	UPROPERTY(BlueprintReadWrite)
-	FVector SpawnLocation = FVector(0, 0, 0);
+	FVector SpawnLocation = FVector::ZeroVector;
 
 	// Shoot direction of FocusBase
 	UPROPERTY(BlueprintReadWrite)
-	FVector SpawnDirection = FVector(0, 0, 0); 
+	FVector SpawnAfterVector = FVector::ZeroVector;
 
 	// Type of FocusBase to shoot
 	UPROPERTY(BlueprintReadWrite)
 	EFocusType FocusType = EFocusType::INVALID;
+
+	// The way to move the FocusBase AFTER spawning
+	UPROPERTY(BlueprintReadWrite)
+	EFocusDirective SpawnDirective = EFocusDirective::DEFAULT; 
 	
 	// For networking
 	virtual bool NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess) override
@@ -89,10 +94,11 @@ public:
 		
 		// Value serialization
 		Ar << FocusType;
+		Ar << SpawnDirective;
 
 		// Struct serialization
 		SpawnLocation.NetSerialize(Ar, Map, bOutSuccess);
-		SpawnDirection.NetSerialize(Ar, Map, bOutSuccess);
+		SpawnAfterVector.NetSerialize(Ar, Map, bOutSuccess);
 		
 		bOutSuccess = true;
 		return true;

@@ -363,7 +363,7 @@ void AFocusfireCharacter::UseFocusAbility(const FInputActionValue& Value)
 	// Use "GameplayAbility.Focus.Shoot" to shoot out the currently selected FocusBase in viewing direction (nothing under crosshair)
 	if (CurrentDashableToFocus == nullptr)
 	{
-		OnInputFocusShoot(FFStruct_FocusData(GetFocusSpawnArrow()->GetComponentLocation(), CurrentCameraDirection, CurrentTypeOfFocusToShoot));
+		OnInputFocusShoot(FFStruct_FocusData(GetFocusSpawnArrow()->GetComponentLocation(), CurrentTypeOfFocusToShoot, EFocusDirective::SHOOT_IN_DIRECTION, CurrentCameraDirection));
 		return;
 	}
 }

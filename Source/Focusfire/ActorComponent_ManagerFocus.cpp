@@ -6,22 +6,16 @@
 #include "BlueprintFunctionLib_FocusUtils.h"
 #include "FFConstants_Struct.h"
 #include "FocusBase.h"
-#include "FocusBaseLaunch.h"
-#include "FocusBaseMeteor.h"
-#include "FocusBaseRebound.h"
 #include "PingSphere.h"
 #include "UserWidget_FocusMarker.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/CanvasPanelSlot.h"
-#include "DynamicMesh/DynamicMesh3.h"
-#include "Kismet/GameplayStatics.h"
 
 void UActorComponent_ManagerFocus::OnTickPositionOffscreenIndicators()
 {
 	APlayerController* _Player = GetWorld()->GetFirstPlayerController();
 
 	// Iterate through all FocusBase in game
-	for (TPair<AFocusBase*, UUserWidget_FocusMarker*>& Focus_Widget : Map_Focus_Widget)
+	for (TPair<AFocusBase*, UUserWidget_FocusMarker*>& Focus_Widget : Map_ClientFocus_Widget)
 	{
 		AFocusBase* _Focus = Focus_Widget.Key;
 		UUserWidget_FocusMarker* _Widget = Focus_Widget.Value;
@@ -121,15 +115,21 @@ void UActorComponent_ManagerFocus::PositionOffscreenIndicators(const APlayerCont
 	MarkerWidget->OnTickRotateIndicatorImage(_Angle);
 }
 
-void UActorComponent_ManagerFocus::OnFocusDestroyed(AActor* DestroyedActor)
+void UActorComponent_ManagerFocus::OnServerFocusDestroyed(AActor* DestroyedActor)
 {
 	if (AFocusBase* _focus = Cast<AFocusBase>(DestroyedActor))
 	{
-		if (UUserWidget_FocusMarker* _widget = Map_Focus_Widget[_focus])
+		if (Map_ClientFocus_Widget.Contains(_focus))
 		{
-			Map_Focus_Widget[_focus]->RemoveFromParent(); // Remove widget (if it exists)
+			Map_ClientFocus_Widget[_focus]->RemoveFromParent(); // Remove widget (if it exists)
 		}
-		Map_Focus_Widget.Remove(_focus); // Remove FocusBase from ref
+
+		// Destroy the client version
+		AFocusBase* _clientFocus = Map_ServerFocus_ClientFocus[_focus];
+		_clientFocus->Destroy();
+
+		// Remove FocusBase from refs
+		Map_ClientFocus_Widget.Remove(_focus);
 	}
 }
 
@@ -173,36 +173,144 @@ void UActorComponent_ManagerFocus::TickComponent(float DeltaTime, ELevelTick Tic
 	OnTickPositionOffscreenIndicators();
 }
 
-AFocusBase* UActorComponent_ManagerFocus::ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection,
-	TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner)
+void UActorComponent_ManagerFocus::RegisterFocus(AFocusBase* NewFocus)
 {
-	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
-	AFocusBase* _spawnedFocus = GetWorld()->SpawnActorDeferred<AFocusBase>(FocusTypeToSpawn, SpawnTransform, Spawner->GetOwner(), Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	// Server replicated FocusBase
+	if(NewFocus->GetLocalRole() == ROLE_SimulatedProxy || NewFocus->GetLocalRole() == ROLE_AutonomousProxy)
+	{
+		// Check to see if there is already a Client-only FocusBase that needs to be synced
+		AFocusBase* _focusToSync = nullptr;
+		for (AFocusBase* _unsynced_focus : List_UnSynced_ClientFocus)
+		{
+			if (_unsynced_focus->GetFocusType() == NewFocus->GetFocusType())
+			{
+				_focusToSync = _unsynced_focus;
+				break;
+			}
+		}
+
+		// Found a Client-only focus that needs to be synced 
+		if (_focusToSync)
+		{
+			_focusToSync->SetServerReplicatedFocusToFollow(NewFocus); // Set the Client-only FocusBase to follow the server-replicated leader
+		}
+
+		// NO Client-only focus, so create one
+		else
+		{
+			_focusToSync = SpawnFocusOnClientOnly(NewFocus->GetOwner(), FFStruct_FocusData(NewFocus->GetActorLocation(), NewFocus->GetFocusType())); // Spawn new one
+			_focusToSync->SetServerReplicatedFocusToFollow(NewFocus);
+		}
+
+		// Remove Client-only focus from un-synced list
+		List_UnSynced_ClientFocus.RemoveSingle(_focusToSync);
+		
+		// Map Server replicated focus to Client-only focus, to destroy Client focus when Server focus is destroyed
+		_focusToSync->ServerUID = NewFocus->ServerUID;
+		Map_ServerFocus_ClientFocus.Add(NewFocus, _focusToSync);
+		NewFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnServerFocusDestroyed); // When destroyed, remove refs
+
+		UE_LOG(LogTemp, Warning, TEXT("DebugText ManagerFocus registered a new SERVER-replicated focus with ID %d"), _focusToSync->ServerUID);
+	}
+
+	// Client-only FocusBase
+	else
+	{
+		Map_ClientFocus_Widget.Add(NewFocus, nullptr); // Store ref of this new FocusBase to map of widget
+
+		UE_LOG(LogTemp, Warning, TEXT("DebugText ManagerFocus registered a new CLIENT-only focus"));
+	}
+}
+
+AFocusBase* UActorComponent_ManagerFocus::SpawnFocusOnClientOnly(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData)
+{
+	// Calculate transform
+	FTransform _spawnTransform;
+	_spawnTransform.SetLocation(FocusSpawnData.SpawnLocation);
+	_spawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
+
+	// Spawn FocusBase
+	AFocusBase* _spawnedFocus = GetWorld()->SpawnActorDeferred<AFocusBase>(GetFocusClass(FocusSpawnData.FocusType), _spawnTransform, Spawner, Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (IsValid(_spawnedFocus))
 	{
-		_spawnedFocus->FinishSpawning(SpawnTransform);
-		_spawnedFocus->ShootInDirection(ShootDirection);
-		
-		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref of this new FocusBase to map
-		_spawnedFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnFocusDestroyed); // When destroyed, remove ref from map
+		_spawnedFocus->SetReplicates(false);
+		_spawnedFocus->bIsClientLocalOnly = true;
+		_spawnedFocus->FinishSpawning(_spawnTransform);
 	}
+
+	// After FocusBase is spawned, move it based on directive
+	switch (FocusSpawnData.SpawnDirective)
+	{
+	case EFocusDirective::SHOOT_IN_DIRECTION:
+		_spawnedFocus->ShootInDirection(FocusSpawnData.SpawnAfterVector);
+		break;
+	case EFocusDirective::SHOOT_TO_POSITION:
+		_spawnedFocus->ShootToLocation(FocusSpawnData.SpawnAfterVector);
+		break;
+	default:
+		break;
+	}
+
+	// Add to list of un-synced focuses
+	List_UnSynced_ClientFocus.Add(_spawnedFocus);
+	
 	return _spawnedFocus;
 }
 
-AFocusBase* UActorComponent_ManagerFocus::ShootFocusToLocation(FTransform SpawnTransform, FVector LockLocation,
-	TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner)
+AFocusBase* UActorComponent_ManagerFocus::SpawnFocusOnClientOnly_Then_SpawnOnServer_RPC(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData)
 {
-	SpawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
-	AFocusBase* _spawnedFocus = GetWorld()->SpawnActorDeferred<AFocusBase>(FocusTypeToSpawn, SpawnTransform, Spawner->GetOwner(), Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	// Create Client-only focus
+	AFocusBase* _spawnedFocus = SpawnFocusOnClientOnly(Spawner, FocusSpawnData);
+
+	// Request Server to create replicated focus
+	RPC_Server_SpawnFocus(Spawner, FocusSpawnData);
+	
+	return _spawnedFocus;
+}
+
+void UActorComponent_ManagerFocus::RPC_Server_SpawnFocus_Implementation(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData)
+{
+	// Calculate transform
+	FTransform _spawnTransform;
+	_spawnTransform.SetLocation(FocusSpawnData.SpawnLocation);
+	_spawnTransform.SetRotation(FQuat::Identity); // Set no rotation (so that widget always spawns on top)
+
+	// Spawn FocusBase
+	AFocusBase* _spawnedFocus = GetWorld()->SpawnActorDeferred<AFocusBase>(GetFocusClass(FocusSpawnData.FocusType), _spawnTransform, Spawner, Spawner->GetInstigator(), ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (IsValid(_spawnedFocus))
 	{
-		_spawnedFocus->FinishSpawning(SpawnTransform);
-		_spawnedFocus->ShootToLocation(LockLocation);
-		
-		Map_Focus_Widget.Add(_spawnedFocus, nullptr); // Store ref of this new FocusBase to map
-		_spawnedFocus->OnDestroyed.AddDynamic(this, &UActorComponent_ManagerFocus::OnFocusDestroyed); // When destroyed, remove ref from map
+		_spawnedFocus->SetReplicates(true);
+		_spawnedFocus->bIsClientLocalOnly = false; // This is server-replicated FocusBase, so set to false
+		_spawnedFocus->ServerUID = Generator_CurrentValid_UID++;
+		_spawnedFocus->FinishSpawning(_spawnTransform);
 	}
-	return _spawnedFocus;
+
+	// After FocusBase is spawned, move it based on directive
+	switch (FocusSpawnData.SpawnDirective)
+	{
+	case EFocusDirective::SHOOT_IN_DIRECTION:
+		_spawnedFocus->ShootInDirection(FocusSpawnData.SpawnAfterVector);
+		RPC_Client_DirectClientPredictedFocus(_spawnedFocus, FocusSpawnData.SpawnDirective);
+		break;
+	case EFocusDirective::SHOOT_TO_POSITION:
+		_spawnedFocus->ShootToLocation(FocusSpawnData.SpawnAfterVector);
+		break;
+	default:
+		break;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("DebugText ManagerFocus Server spawned a server-replicated focus"));
+	
+	// TODO add to list of all server focuses? #ccc 
+}
+
+void UActorComponent_ManagerFocus::RPC_Client_DirectClientPredictedFocus_Implementation(
+	AFocusBase* ServerReplicatedFocus, const EFocusDirective& Directive, const FVector& DirectiveVector, const float& DirectiveFloat)
+{
+	if (Map_ServerFocus_ClientFocus.Contains(ServerReplicatedFocus))
+	{
+		// Direct client-only FocusBase here
+	}
 }
 
 APingSphere* UActorComponent_ManagerFocus::SpawnPing(FTransform SpawnTransform, TSubclassOf<class APingSphere> PingClassToSpawn,

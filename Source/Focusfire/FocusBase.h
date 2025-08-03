@@ -29,12 +29,12 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	// Called after this FocusBase is properly replicated
+	virtual void PostNetInit() override;
+	
 	/** The type of FocusBase this is */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase")
+	UPROPERTY(Replicated, EditAnywhere, BlueprintReadOnly, Category = "FocusBase")
 	EFocusType FocusType;
-
-	/** @return The type of Focus this FocusBase is */
-	FORCEINLINE EFocusType GetFocusType() const { return FocusType; }
 	
 	/** Sphere collision */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
@@ -101,6 +101,10 @@ protected:
 	/** The location that the FocusBase wants to lock position upon reaching */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FocusBase", meta = (AllowPrivateAccess = "true"))
 	FVector IdealLockPosition;
+
+	/** Reference to the replicated FocusBase that was spawned on Server. Use the reference to sync this NON-replicated FocusBase */
+	UPROPERTY(BlueprintReadWrite, Category = "FocusBase")
+	TObjectPtr<AFocusBase> ServerLeaderFocusBase;
 	
 	/** 
 	* Called in response to the OnComponentBeginOverlap event
@@ -168,7 +172,25 @@ public:
 	*/
 	UFUNCTION(BlueprintImplementableEvent, Category = "FocusBase")
 	void DisplayDebugString(const FString& DebugString);
+
+	/** Networking **/
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool IsSupportedForNetworking() const override { return true; }
+
+	/** The unique identifier assigned to this FocusBase, assigned by the Server */
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "FocusBase", meta = (ExposeOnSpawn="true"))
+	int ServerUID = -1;
 	
+	/** Whether this FocusBase is Client only */
+	UPROPERTY(BlueprintReadWrite, Category = "FocusBase", meta = (ExposeOnSpawn="true"))
+	bool bIsClientLocalOnly = true;
+	
+	/** 
+	* Sets the replicated FocusBase that was spawned on Server.
+	* @param ServerReplicatedFocus: The FocusBase that was replicated from the Server, that this FocusBase should follow.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "FocusBase")
+	void SetServerReplicatedFocusToFollow(AFocusBase* ServerReplicatedFocus);
 public:
 	/** Getters */
 	
@@ -177,4 +199,7 @@ public:
 	*/
 	UFUNCTION(BlueprintCallable, Category = "FocusBase")
 	FORCEINLINE bool GetCanBeInteractedWith() const { return flag_Interactable; }
+
+	/** @return The type of Focus this FocusBase is */
+	FORCEINLINE EFocusType GetFocusType() const { return FocusType; }
 };

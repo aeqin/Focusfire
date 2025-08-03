@@ -3,10 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "FFConstants_Enum.h"
 #include "Components/ActorComponent.h"
 #include "ActorComponent_ManagerFocus.generated.h"
 
 
+struct FFStruct_FocusData;
+enum class EFocusDirective : uint8;
 enum class EFocusType : uint8;
 class APingSphere;
 class UWidgetComponent;
@@ -18,9 +21,20 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 {
 	GENERATED_BODY()
 
+	/** An int that guarantees that FocusBases have unique identifiers (decided by Server) */
+	int Generator_CurrentValid_UID = 0;
+
+	/** A list of FocusBase (spawned by Client, ONLY on Client), that has not synced with a server-replicated FocusBase */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TArray<AFocusBase*> List_UnSynced_ClientFocus;
+
+	/** A list of server-replicated FocusBase that maps to non-replicated FocusBase this Client spawned for itself */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
+	TMap<AFocusBase*, AFocusBase*> Map_ServerFocus_ClientFocus;
+	
 	/** A map of FocusBase to UUserWidget_FocusMarker currently active in the game */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
-	TMap<AFocusBase*, UUserWidget_FocusMarker*> Map_Focus_Widget;
+	TMap<AFocusBase*, UUserWidget_FocusMarker*> Map_ClientFocus_Widget;
 
 	/** A map of PingSphere to UUserWidget_FocusMarker currently active in the game */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ManagerFocus", meta = (AllowPrivateAccess = true))
@@ -47,7 +61,7 @@ class FOCUSFIRE_API UActorComponent_ManagerFocus : public UActorComponent
 	
 	/** Function that is fired when a FocusBase is destroyed */
 	UFUNCTION()
-	void OnFocusDestroyed(AActor* DestroyedActor);
+	void OnServerFocusDestroyed(AActor* DestroyedActor);
 
 	/** Function that is fired when a PingSphere is destroyed */
 	UFUNCTION()
@@ -69,6 +83,9 @@ public:
 	// Sets default values for this component's properties
 	UActorComponent_ManagerFocus();
 
+	// As FocusBase Manager, gain access to private/protected properties of FocusBase
+	friend class AFocusBase; 
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
@@ -78,24 +95,54 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	/**
-	 * Spawn a FocusBase at the specified location, then shoot it forward
-	 * @param SpawnTransform: The location in world space to spawn the FocusBase
-	 * @param ShootDirection: The direction to shoot the FocusBase (FocusBase itself handles speed)
-	 * @param FocusTypeToSpawn: The type of FocusBase to spawn (such as FocusBaseRebound)
-	 * @param Spawner: The AActor that spawned this FocusBase
+	 * When a FocusBase is initialized, expect it to call ManagerFocus, and register itself
+	 * @param NewFocus: Reference to the new Focus
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
-	AFocusBase* ShootFocusInDirection(FTransform SpawnTransform, FVector ShootDirection, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
+	void RegisterFocus(AFocusBase* NewFocus);
 
 	/**
-	 * Spawn a FocusBase at the specified location, then shoot it forward
-	 * @param SpawnTransform: The location in world space to spawn the FocusBase
-	 * @param LockLocation: The location that the FocusBase will move to
-	 * @param FocusTypeToSpawn: The type of FocusBase to spawn (such as FocusBaseRebound)
-	 * @param Spawner: The AActor that spawned this FocusBase
+	 * Spawn a new FocusBase on this Client
+	 * @param Spawner: Actor that spawned this FocusBase
+	 * @param FocusSpawnData: Data that describes how the FocusBase should be spawned
+	 * @param FocusTypeToSpawn: Type of focus to spawn
+	 * @param SpawnLocation: World location to spawn focus
+	 * @param SpawnDirective: Describes how the focus is spawned
+	 * @param AfterSpawnVector: Only if SpawnType is not EFocusSpawnType::DEFAULT, describes how the focus is shot after spawning
+	 * @returns: The Client-only newly created FocusBase
 	 */
-	UFUNCTION(BlueprintCallable, Category = "ManagerFocus")
-	AFocusBase* ShootFocusToLocation(FTransform SpawnTransform, FVector LockLocation, TSubclassOf<class AFocusBase> FocusTypeToSpawn, AActor* Spawner);
+	UFUNCTION(BLueprintCallable, Category = "ManagerFocus")
+	AFocusBase* SpawnFocusOnClientOnly(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData);// EFocusType FocusTypeToSpawn, FVector SpawnLocation);//, EFocusSpawnDirective SpawnDirective, FVector AfterSpawnVector);
+
+	/**
+	 * Spawn a new FocusBase on this Client, then request Server to spawn a replicated FocusBase
+	 * @param Spawner: Actor that spawned this FocusBase
+	 * @param FocusSpawnData: Data that describes how the FocusBase should be spawned
+	 * @param FocusTypeToSpawn: Type of focus to spawn
+	 * @param SpawnLocation: World location to spawn focus
+	 * @returns: The Client-only newly created FocusBase
+	 */
+	UFUNCTION(BLueprintCallable, Category = "ManagerFocus")
+	AFocusBase* SpawnFocusOnClientOnly_Then_SpawnOnServer_RPC(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData);
+	
+	/**
+	 * Spawn a new FocusBase on the Server, which will be replicated to all other clients (called by Client)
+	 * @param Spawner: Actor that spawned this FocusBase
+	 * @param FocusSpawnData: Data that describes how the FocusBase should be spawned
+	 */
+	UFUNCTION(Server, Reliable, Category = "ManagerFocus")
+	void RPC_Server_SpawnFocus(AActor* Spawner, const FFStruct_FocusData& FocusSpawnData);
+	
+	/**
+	 * After Server-replicated FocusBase is directed, tell client to also direct the locally-predicted FocusBase
+	 * @param ServerReplicatedFocus: Reference to the Server-replicated FocusBase (the invisible focus that the Player does NOT see)
+	 * @param Directive: Contains info on how to direct the FocusBase
+	 * @param DirectiveVector: Contains vector info to use with Directive parameter
+	 * @param DirectiveFloat: Contains float info to use with Directive parameter
+	 * 
+	 */
+	UFUNCTION(Client, Reliable, BLueprintCallable, Category = "ManagerFocus")
+	void RPC_Client_DirectClientPredictedFocus(AFocusBase* ServerReplicatedFocus, const EFocusDirective& Directive, const FVector& DirectiveVector = FVector::ZeroVector, const float& DirectiveFloat = 0.0f);
 	
 	/**
 	 * Spawn a PingSphere at the specified location

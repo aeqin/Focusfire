@@ -6,6 +6,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "BlueprintFunctionLib_FocusUtils.generated.h"
 
+enum class EFocusDirective : uint8;
 class UActorComponent_ManagerFocus;
 enum class EFocusType : uint8;
 struct FGameplayAbilityTargetDataHandle;
@@ -74,12 +75,13 @@ public:
 
 	/**
 	 * @param SpawnLocation: The spawn position of the FocusBase
-	 * @param SpawnDirection: The shoot direction of the FocusBase
 	 * @param SpawnType: The type of FocusBase to spawn
+	 * @param SpawnDirective: How to move the FocusBase AFTER spawning
+	 * @param SpawnAfterVector: If [SpawnDirective] is NOT EFocusSpawnDirective::DEFAULT, then either direction to shoot FocusBase, or position to shoot FocusBase towards
 	 * @returns: A FGameplayTargetDataHandle that contains the custom FocusData object
 	 */
 	UFUNCTION(BlueprintPure, Category = "FF_Utils")
-	static FGameplayAbilityTargetDataHandle CreateTargetData_FocusData(const FVector SpawnLocation, const FVector SpawnDirection, const EFocusType SpawnType);
+	static FGameplayAbilityTargetDataHandle CreateTargetData_FocusData(const FVector SpawnLocation, const EFocusType SpawnType, const EFocusDirective SpawnDirective, const FVector SpawnAfterVector = FVector::ZeroVector);
 
 	/**
 	 * @param FocusData: The data of a FocusBase to be spawned

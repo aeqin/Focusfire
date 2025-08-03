@@ -4,7 +4,9 @@
 #include "FocusBase.h"
 #include "FocusBase.h"
 #include "AbilitySystemComponent.h"
+#include "ActorComponent_ManagerFocus.h"
 #include "FocusfireCharacter.h"
+#include "FocusfireGameState.h"
 #include "FocusPeriodSlowZone.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -12,6 +14,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "UserWidget_FocusMarker.h"
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AFocusBase::AFocusBase()
@@ -81,6 +84,19 @@ void AFocusBase::BeginPlay()
 	}
 }
 
+void AFocusBase::PostNetInit()
+{
+	Super::PostNetInit();
+
+	// When this FocusBase is done initializing across network, register it with the focus Manager
+	if (UActorComponent_ManagerFocus* _focusManager = GetWorld()->GetGameState<AFocusfireGameState>()->GetManagerFocus())
+	{
+		_focusManager->RegisterFocus(this);
+
+		UE_LOG(LogTemp, Warning, TEXT("DebugText After post net init, spawn id is %d"),ServerUID);
+	}
+}
+
 void AFocusBase::TickLifetimeTimer()
 {
 	LifeInSecondsCurr -= 1; // Timer ticks down by 1 every second
@@ -104,6 +120,27 @@ void AFocusBase::PostNetReceiveLocationAndRotation()
 	c_ProjectileMovementComponent->MoveInterpolationTarget(NewLocation, LocalRepMovement.Rotation);
 }
 
+void AFocusBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Add properties to replicated for the derived class
+	DOREPLIFETIME(AFocusBase, FocusType);
+	DOREPLIFETIME(AFocusBase, ServerUID);
+}
+
+void AFocusBase::SetServerReplicatedFocusToFollow(AFocusBase* ServerReplicatedFocus)
+{
+	ServerLeaderFocusBase = ServerReplicatedFocus;
+
+	// For the client-side server-replicated FocusBase, make it non-collidable and invisible
+	ServerLeaderFocusBase->SetActorEnableCollision(false);
+	ServerLeaderFocusBase->SetActorHiddenInGame(true);
+
+	// Stop moving this client-only FocusBase (local prediction), and instead lerp towards per Tick
+	c_ProjectileMovementComponent->Velocity = FVector::ZeroVector;
+}
+
 void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                          UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -119,6 +156,12 @@ void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponen
 		return;
 	}
 
+	// Do NOT be destroyed if overlapping a FocusBase
+	if (AFocusBase* _focus = Cast<AFocusBase>(OtherActor))
+	{
+		return;
+	}
+
 	// Spawn VFX for hitting something
 	if (NiagaraSystem_HitVFX)
 	{
@@ -126,8 +169,12 @@ void AFocusBase::OnFocusBaseActorEntered(UPrimitiveComponent* OverlappedComponen
 		_hitParticles->AddRelativeRotation(FRotator(90, 0, 0));
 	}
 
-	GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Red, "Destroyed by " + OtherActor->GetName());
-	Destroy();
+	// Destroy, if on server
+	if (HasAuthority())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Red, "Destroyed by " + OtherActor->GetName());
+		Destroy();
+	}
 }
 
 void AFocusBase::OnFocusBaseActorExited(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -141,7 +188,7 @@ void AFocusBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (flag_MovingToLockInPlace and HasAuthority())
+	if (flag_MovingToLockInPlace)
 	{
 		FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
 		FVector _Direction_CurrentVelocity = c_ProjectileMovementComponent->Velocity.GetSafeNormal();
@@ -153,11 +200,22 @@ void AFocusBase::Tick(float DeltaTime)
 		}
 		DisplayDebugString("DebugText tick in focus base");
 	}
+
+	// If this FocusBase is a client-only, interpolate it towards the server-replicated FocusBase
+	if (IsValid(ServerLeaderFocusBase))
+	{
+		// Position
+		SetActorLocation(FMath::VInterpTo(GetActorLocation(), ServerLeaderFocusBase->GetActorLocation(), DeltaTime, 10));
+
+		// Rotation
+		SetActorRotation(FMath::RInterpTo(GetActorRotation(), ServerLeaderFocusBase->GetActorRotation(), DeltaTime, 10));
+	}
 }
 
 void AFocusBase::ShootInDirection(const FVector Direction)
 {
 	c_ProjectileMovementComponent->Velocity = Direction.GetSafeNormal() * ShootSpeed;
+
 	DisplayDebugString("DebugText shoot in direction");
 }
 
@@ -167,12 +225,13 @@ void AFocusBase::ShootToLocation(const FVector LockPlace)
 	flag_MovingToLockInPlace = true;
 	FVector _Direction_LockLocation = (IdealLockPosition - GetActorLocation()).GetSafeNormal();
 	c_ProjectileMovementComponent->Velocity = _Direction_LockLocation * ShootSpeed;
+	
 	DisplayDebugString("DebugText shoot to location");
 }
 
 void AFocusBase::LockInPlace(bool bResetLifetime)
 {
-	c_ProjectileMovementComponent->Velocity = FVector(0, 0, 0);
+	c_ProjectileMovementComponent->Velocity = FVector::ZeroVector;
 	c_ProjectileMovementComponent->ProjectileGravityScale = 0.0f;
 
 	// If flag to reset lifetime is set, then reset lifetime of FocusBase

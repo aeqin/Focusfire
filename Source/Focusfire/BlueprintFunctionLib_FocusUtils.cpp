@@ -167,7 +167,7 @@ bool UBlueprintFunctionLib_FocusUtils::GetIntersectionFromTwoLineSegments(const 
 }
 
 FGameplayAbilityTargetDataHandle UBlueprintFunctionLib_FocusUtils::CreateTargetData_FocusData(
-	const FVector SpawnLocation, const FVector SpawnDirection, const EFocusType SpawnType)
+	const FVector SpawnLocation, const EFocusType SpawnType, const EFocusDirective SpawnDirective, const FVector SpawnAfterVector)
 {
 	// Create our target data type, 
 	// Handle's automatically cleanup and delete this data when the handle is destructed, 
@@ -175,7 +175,7 @@ FGameplayAbilityTargetDataHandle UBlueprintFunctionLib_FocusUtils::CreateTargetD
 	FFGameplayAbilityTargetData_FocusData* _FocusData = new FFGameplayAbilityTargetData_FocusData();
 	
 	// Setup the struct's information to use the inputted name and any other changes we may want to do
-	_FocusData->FocusData = FFStruct_FocusData(SpawnLocation, SpawnDirection, SpawnType);
+	_FocusData->FocusData = FFStruct_FocusData(SpawnLocation, SpawnType, SpawnDirective, SpawnAfterVector);
 	
 	// Make our handle wrapper for Blueprint usage
 	FGameplayAbilityTargetDataHandle Handle;
@@ -189,7 +189,8 @@ FString UBlueprintFunctionLib_FocusUtils::GetStringFromFocusData(const FFStruct_
 {
 	if (FocusData.IsValidStruct())
 	{
-		return FString::Printf(TEXT("SpawnLocation: [%s]\nSpawnDirection: [%s]\nSpawnType: [%s]"), *FocusData.SpawnLocation.ToString(), *FocusData.SpawnLocation.ToString(), *UEnum::GetValueAsString(FocusData.FocusType));
+		return FString::Printf(TEXT("SpawnLocation: [%s]\nSpawnType: [%s]\nSpawnDirective: [%s]\nSpawnAfterVector: [%s]"),
+			*FocusData.SpawnLocation.ToString(), *UEnum::GetValueAsString(FocusData.FocusType), *UEnum::GetValueAsString(FocusData.SpawnDirective), *FocusData.SpawnAfterVector.ToString());
 	}
 	else
 	{
@@ -215,7 +216,7 @@ FFStruct_FocusData UBlueprintFunctionLib_FocusUtils::GetFocusDataFromTargetDataH
 		{
 			// Here is when you would do the cast because we know its the correct type already
 			FFGameplayAbilityTargetData_FocusData* _FocusData = static_cast<FFGameplayAbilityTargetData_FocusData*>(_Data);
-			return FFStruct_FocusData(_FocusData->FocusData.SpawnLocation, _FocusData->FocusData.SpawnDirection, _FocusData->FocusData.FocusType);
+			return FFStruct_FocusData(_FocusData->FocusData.SpawnLocation, _FocusData->FocusData.FocusType, _FocusData->FocusData.SpawnDirective, _FocusData->FocusData.SpawnAfterVector);
 		}
 	}
 	
